@@ -1,0 +1,1 @@
+# Infrastructure layer - External system integrations (APIs, databases, etc.)
