@@ -516,7 +516,7 @@ class TrainReservationApp(QMainWindow):
         self.ktx_payment_business_num_input.setPlaceholderText("사업자번호 (10자리)")
         self.ktx_payment_business_num_input.setVisible(False)
         self.ktx_payment_expire_input = QLineEdit()
-        self.ktx_payment_expire_input.setPlaceholderText("유효기간 (MMYY)")
+        self.ktx_payment_expire_input.setPlaceholderText("유효기간 (YYMM)")
 
         def toggle_ktx_corporate():
             if self.ktx_payment_corporate_check.isChecked():
@@ -674,7 +674,7 @@ class TrainReservationApp(QMainWindow):
         self.srt_payment_business_num_input.setPlaceholderText("사업자번호 (10자리)")
         self.srt_payment_business_num_input.setVisible(False)
         self.srt_payment_expire_input = QLineEdit()
-        self.srt_payment_expire_input.setPlaceholderText("유효기간 (MMYY)")
+        self.srt_payment_expire_input.setPlaceholderText("유효기간 (YYMM)")
 
         def toggle_srt_corporate():
             if self.srt_payment_corporate_check.isChecked():
