@@ -1,7 +1,50 @@
+# Project specific
 assets/external/
 .states
 .web
 *.db
+
+# Python
 *.py[cod]
+*.so
+*.egg
+*.egg-info/
 __pycache__/
+.Python
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv
+
+# uv
+.uv/
+uv.lock
+
+# PyInstaller
 build/
+dist/
+*.spec
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+*.cover
+
+# Logs
+*.log
+logs/
+
+# Environment variables
+.env
+.env.local
