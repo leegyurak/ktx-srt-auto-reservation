@@ -9,15 +9,13 @@
 [![uv](https://img.shields.io/badge/uv-package_manager-DE5FE9?style=for-the-badge)](https://github.com/astral-sh/uv)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
 
-[English](README_EN.md) | 한국어
-
 ---
 
 </div>
 
 ## 📖 소개
 
-KTX/SRT 기차표 자동 예약 매크로는 코레일(KTX/ITX)과 SRT의 온라인 예약 시스템을 자동화하여,
+KTX/SRT 기차표 자동 예약 매크로는 코레일(KTX)과 SRT의 온라인 예약 시스템을 자동화하여,
 원하는 열차표를 빠르고 정확하게 예약할 수 있도록 도와주는 데스크톱 애플리케이션입니다.
 
 특히 명절이나 주말 같은 성수기에 원하는 시간대의 표를 구하기 어려운 상황에서,
@@ -130,7 +128,6 @@ uv run python main.py
 📍 도착역: 부산
 📅 날짜: 2025-10-10
 ⏰ 시간: 09:00 ~ 12:00
-👤 인원: 성인 2명
 💺 좌석: 일반실
 ```
 
@@ -138,7 +135,7 @@ uv run python main.py
 
 자동 결제를 원할 경우:
 - 카드번호 (16자리)
-- 유효기간 (MM/YY)
+- 유효기간 (YYMM) / (사업자등록번호 10자리)
 - CVC (3자리)
 - 카드 비밀번호 앞 2자리
 
@@ -158,7 +155,7 @@ uv run python main.py
 🎫 열차: KTX-101
 🕐 출발: 09:00
 📍 경로: 서울 → 부산
-💺 좌석: 3호차 12A, 12B
+💺 좌석: 3호차 12A
 ```
 
 ## 🛠️ 개발자 가이드
@@ -380,6 +377,15 @@ ktx-srt-macro/
 ## 📄 라이선스
 
 이 프로젝트는 MIT 라이선스 하에 배포됩니다. 자세한 내용은 `LICENSE` 파일을 참조하세요.
+
+### 오픈소스 라이선스 고지
+
+이 프로젝트는 다음 오픈소스 프로젝트의 코드를 포함하고 있습니다:
+
+- **[SRT](https://github.com/ryanking13/SRT)** by ryanking13 - MIT License
+- **[korail2](https://github.com/carpedm20/korail2)** by carpedm20 - BSD License
+
+각 라이선스의 전문은 해당 프로젝트의 저장소에서 확인할 수 있습니다.
 
 ## ⚠️ 면책사항
 
