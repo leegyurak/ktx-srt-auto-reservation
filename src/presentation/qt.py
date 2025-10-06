@@ -13,7 +13,7 @@ from PyQt6.QtWidgets import (
     QCheckBox, QScrollArea, QFrame, QMessageBox
 )
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal, QObject
-from PyQt6.QtGui import QIcon
+from PyQt6.QtGui import QIcon, QPalette, QColor
 from domain.models.entities import ReservationRequest, Passenger, TrainSchedule, ReservationResult, CreditCard, PaymentResult
 from domain.models.enums import PassengerType, TrainType
 from src.infrastructure.adapters.ktx_service import KTXService
@@ -36,6 +36,33 @@ def resource_path(relative_path):
         base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 
     return os.path.join(base_path, relative_path)
+
+
+def setup_dark_palette(app):
+    """다크 모드 팔레트 설정 (Windows 시스템 테마 무시)"""
+    palette = QPalette()
+
+    # 기본 배경/전경 색상
+    palette.setColor(QPalette.ColorRole.Window, QColor(23, 33, 43))  # #17212b
+    palette.setColor(QPalette.ColorRole.WindowText, QColor(255, 255, 255))
+    palette.setColor(QPalette.ColorRole.Base, QColor(35, 46, 60))  # #232e3c
+    palette.setColor(QPalette.ColorRole.AlternateBase, QColor(23, 33, 43))
+    palette.setColor(QPalette.ColorRole.ToolTipBase, QColor(35, 46, 60))
+    palette.setColor(QPalette.ColorRole.ToolTipText, QColor(255, 255, 255))
+    palette.setColor(QPalette.ColorRole.Text, QColor(255, 255, 255))
+    palette.setColor(QPalette.ColorRole.Button, QColor(35, 46, 60))
+    palette.setColor(QPalette.ColorRole.ButtonText, QColor(255, 255, 255))
+    palette.setColor(QPalette.ColorRole.BrightText, QColor(255, 0, 0))
+    palette.setColor(QPalette.ColorRole.Link, QColor(82, 136, 193))  # #5288c1
+    palette.setColor(QPalette.ColorRole.Highlight, QColor(82, 136, 193))
+    palette.setColor(QPalette.ColorRole.HighlightedText, QColor(255, 255, 255))
+
+    # Disabled 상태
+    palette.setColor(QPalette.ColorGroup.Disabled, QPalette.ColorRole.WindowText, QColor(139, 152, 165))
+    palette.setColor(QPalette.ColorGroup.Disabled, QPalette.ColorRole.Text, QColor(139, 152, 165))
+    palette.setColor(QPalette.ColorGroup.Disabled, QPalette.ColorRole.ButtonText, QColor(139, 152, 165))
+
+    app.setPalette(palette)
 
 
 STYLESHEET = """
@@ -1373,6 +1400,7 @@ def main():
     """메인 함수"""
     app = QApplication(sys.argv)
     app.setStyle('Fusion')  # 모던한 스타일 적용
+    setup_dark_palette(app)  # 다크 팔레트 강제 적용 (Windows 시스템 테마 무시)
     window = TrainReservationApp()
     window.show()
     sys.exit(app.exec())
