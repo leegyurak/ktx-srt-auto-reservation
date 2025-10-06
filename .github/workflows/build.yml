@@ -28,7 +28,7 @@ jobs:
 
       - name: Build Windows executable
         run: |
-          uv run pyinstaller --name KTX-SRT-Macro --onefile --windowed --icon "assets/favicon.ico" --add-data "src;src" main.py
+          uv run pyinstaller --name KTX-SRT-Macro --onefile --windowed --icon "assets/favicon.ico" --add-data "src;src" --noupx --version-file version.txt main.py
 
       - name: Upload Windows artifact
         uses: actions/upload-artifact@v4
