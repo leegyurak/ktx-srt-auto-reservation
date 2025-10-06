@@ -1,5 +1,6 @@
 """PyQt6 기반 KTX/SRT Macro - 개선된 버전"""
 import sys
+import os
 import datetime
 import random
 import time
@@ -12,6 +13,7 @@ from PyQt6.QtWidgets import (
     QCheckBox, QScrollArea, QFrame, QMessageBox
 )
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal, QObject
+from PyQt6.QtGui import QIcon
 from domain.models.entities import ReservationRequest, Passenger, TrainSchedule, ReservationResult, CreditCard, PaymentResult
 from domain.models.enums import PassengerType, TrainType
 from src.infrastructure.adapters.ktx_service import KTXService
@@ -22,6 +24,18 @@ from src.constants.ui import (
     DEFAULT_SRT_DEPARTURE, DEFAULT_SRT_ARRIVAL,
     RETRY_DELAY_MIN, RETRY_DELAY_MAX,
 )
+
+
+def resource_path(relative_path):
+    """PyInstaller로 패키징된 리소스 파일의 절대 경로를 반환합니다."""
+    try:
+        # PyInstaller가 생성한 임시 폴더
+        base_path = sys._MEIPASS
+    except AttributeError:
+        # 개발 환경
+        base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+
+    return os.path.join(base_path, relative_path)
 
 
 STYLESHEET = """
@@ -345,6 +359,11 @@ class TrainReservationApp(QMainWindow):
         super().__init__()
         self.setWindowTitle("🚄 KTX/SRT Macro")
         self.setMinimumSize(1000, 900)
+
+        # 아이콘 설정
+        icon_path = resource_path('assets/favicon.ico')
+        if os.path.exists(icon_path):
+            self.setWindowIcon(QIcon(icon_path))
 
         # 서비스 초기화
         self.ktx_service = KTXService()

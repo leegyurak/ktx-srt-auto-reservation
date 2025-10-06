@@ -171,7 +171,8 @@ uv sync
 
 # 빌드 실행
 uv run pyinstaller --name KTX-SRT-Macro --onefile --windowed \
-  --icon "assets/favicon.ico" --add-data "src;src" main.py
+  --icon "assets/favicon.ico" --add-data "src;src" --add-data "assets;assets" \
+  --noupx --version-file version.txt main.py
 ```
 
 **macOS**
@@ -181,7 +182,7 @@ uv sync
 
 # 빌드 실행
 uv run pyinstaller --name KTX-SRT-Macro --onefile --windowed \
-  --icon "assets/favicon.icns" --add-data "src:src" main.py
+  --icon "assets/favicon.icns" --add-data "src:src" --add-data "assets:assets" main.py
 ```
 
 빌드된 실행 파일은 `dist/` 디렉토리에 생성됩니다.
