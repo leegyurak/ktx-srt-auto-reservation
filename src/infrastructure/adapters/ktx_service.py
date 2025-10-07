@@ -5,7 +5,8 @@ from src.domain.models.entities import (
     Station, TrainSchedule, ReservationRequest, ReservationResult, CreditCard, PaymentResult
 )
 from src.domain.models.enums import PassengerType, TrainType
-from src.infrastructure.external.ktx import Korail, AdultPassenger, TrainType as KorailTrainType
+from src.infrastructure.external.ktx import Korail, AdultPassenger, ChildPassenger, SeniorPassenger, TrainType as KorailTrainType
+from src.domain.models.entities import Passenger
 from src.constants.stations import KTX_STATIONS
 
 
@@ -76,11 +77,7 @@ class KTXService(TrainService):
 
         try:
             # Convert passengers to Korail format
-            passengers = []
-            for passenger in request.passengers:
-                if passenger.passenger_type == PassengerType.ADULT:
-                    for _ in range(passenger.count):
-                        passengers.append(AdultPassenger())
+            passengers = self._convert_passengers(request.passengers)
 
             # Find the train again for reservation
             trains = self._korail.search_train(
@@ -155,6 +152,25 @@ class KTXService(TrainService):
             return getattr(train, 'seat_count', 0)
         except:
             return 0
+
+    def _convert_passengers(self, passengers: List[Passenger]) -> List[AdultPassenger | ChildPassenger | SeniorPassenger]:
+        """Convert domain passengers to Korail format"""
+        korail_passengers = []
+        for passenger in passengers:
+            match passenger.passenger_type:
+                case PassengerType.ADULT:
+                    korail_passengers.append(
+                        AdultPassenger(count=passenger.count)
+                    )
+                case PassengerType.CHILD:
+                    korail_passengers.append(
+                        ChildPassenger(count=passenger.count)
+                    )
+                case PassengerType.SENIOR:
+                    korail_passengers.append(
+                        SeniorPassenger(count=passenger.count)
+                    )
+        return korail_passengers
 
     def payment_reservation(self, reservation: ReservationResult, credit_card: CreditCard) -> PaymentResult:
         """Pay for a reservation with credit card"""

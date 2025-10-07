@@ -10,7 +10,7 @@ import platform
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QGridLayout,
     QLabel, QPushButton, QLineEdit, QTextEdit, QTabWidget,
-    QCheckBox, QScrollArea, QFrame, QMessageBox
+    QCheckBox, QScrollArea, QFrame
 )
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal, QObject
 from PyQt6.QtGui import QIcon, QPalette, QColor
@@ -19,7 +19,6 @@ from domain.models.enums import PassengerType, TrainType
 from src.infrastructure.adapters.ktx_service import KTXService
 from src.infrastructure.adapters.srt_service import SRTService
 from src.constants.ui import (
-    DEFAULT_DEPARTURE_DATE, DEFAULT_KTX_TIME, DEFAULT_SRT_TIME,
     DEFAULT_KTX_DEPARTURE, DEFAULT_KTX_ARRIVAL,
     DEFAULT_SRT_DEPARTURE, DEFAULT_SRT_ARRIVAL,
     RETRY_DELAY_MIN, RETRY_DELAY_MAX,
@@ -42,278 +41,341 @@ def setup_dark_palette(app):
     """다크 모드 팔레트 설정 (Windows 시스템 테마 무시)"""
     palette = QPalette()
 
-    # 기본 배경/전경 색상
-    palette.setColor(QPalette.ColorRole.Window, QColor(23, 33, 43))  # #17212b
-    palette.setColor(QPalette.ColorRole.WindowText, QColor(255, 255, 255))
-    palette.setColor(QPalette.ColorRole.Base, QColor(35, 46, 60))  # #232e3c
-    palette.setColor(QPalette.ColorRole.AlternateBase, QColor(23, 33, 43))
-    palette.setColor(QPalette.ColorRole.ToolTipBase, QColor(35, 46, 60))
-    palette.setColor(QPalette.ColorRole.ToolTipText, QColor(255, 255, 255))
-    palette.setColor(QPalette.ColorRole.Text, QColor(255, 255, 255))
-    palette.setColor(QPalette.ColorRole.Button, QColor(35, 46, 60))
-    palette.setColor(QPalette.ColorRole.ButtonText, QColor(255, 255, 255))
-    palette.setColor(QPalette.ColorRole.BrightText, QColor(255, 0, 0))
-    palette.setColor(QPalette.ColorRole.Link, QColor(82, 136, 193))  # #5288c1
-    palette.setColor(QPalette.ColorRole.Highlight, QColor(82, 136, 193))
-    palette.setColor(QPalette.ColorRole.HighlightedText, QColor(255, 255, 255))
+    # 기본 배경/전경 색상 - Dark Theme
+    palette.setColor(QPalette.ColorRole.Window, QColor(17, 24, 39))  # #111827
+    palette.setColor(QPalette.ColorRole.WindowText, QColor(243, 244, 246))  # #f3f4f6
+    palette.setColor(QPalette.ColorRole.Base, QColor(31, 41, 55))  # #1f2937
+    palette.setColor(QPalette.ColorRole.AlternateBase, QColor(17, 24, 39))  # #111827
+    palette.setColor(QPalette.ColorRole.ToolTipBase, QColor(31, 41, 55))  # #1f2937
+    palette.setColor(QPalette.ColorRole.ToolTipText, QColor(243, 244, 246))  # #f3f4f6
+    palette.setColor(QPalette.ColorRole.Text, QColor(243, 244, 246))  # #f3f4f6
+    palette.setColor(QPalette.ColorRole.Button, QColor(31, 41, 55))  # #1f2937
+    palette.setColor(QPalette.ColorRole.ButtonText, QColor(209, 213, 219))  # #d1d5db
+    palette.setColor(QPalette.ColorRole.BrightText, QColor(239, 68, 68))  # #ef4444
+    palette.setColor(QPalette.ColorRole.Link, QColor(96, 165, 250))  # #60a5fa
+    palette.setColor(QPalette.ColorRole.Highlight, QColor(59, 130, 246))  # #3b82f6
+    palette.setColor(QPalette.ColorRole.HighlightedText, QColor(255, 255, 255))  # #ffffff
 
     # Disabled 상태
-    palette.setColor(QPalette.ColorGroup.Disabled, QPalette.ColorRole.WindowText, QColor(139, 152, 165))
-    palette.setColor(QPalette.ColorGroup.Disabled, QPalette.ColorRole.Text, QColor(139, 152, 165))
-    palette.setColor(QPalette.ColorGroup.Disabled, QPalette.ColorRole.ButtonText, QColor(139, 152, 165))
+    palette.setColor(QPalette.ColorGroup.Disabled, QPalette.ColorRole.WindowText, QColor(75, 85, 99))  # #4b5563
+    palette.setColor(QPalette.ColorGroup.Disabled, QPalette.ColorRole.Text, QColor(75, 85, 99))  # #4b5563
+    palette.setColor(QPalette.ColorGroup.Disabled, QPalette.ColorRole.ButtonText, QColor(75, 85, 99))  # #4b5563
 
     app.setPalette(palette)
 
 
 STYLESHEET = """
 * {
-    font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "맑은 고딕", "Malgun Gothic", "Segoe UI", sans-serif;
+    font-family: "Pretendard Variable", -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "맑은 고딕", "Malgun Gothic", "Segoe UI", sans-serif;
 }
 
 QMainWindow {
-    background: #0e1621;
+    background: #0a0e17;
 }
 
 #centralWidget {
-    background: #17212b;
+    background: #111827;
     border-radius: 0px;
 }
 
-/* 탭 스타일 - Telegram 느낌 */
+/* 탭 스타일 - Dark */
 QTabWidget::pane {
     border: none;
-    background: #17212b;
-    border-radius: 0px;
+    background: transparent;
+    border-radius: 16px;
 }
 
 QTabBar::tab {
     background: transparent;
-    color: #8b98a5;
-    padding: 14px 28px;
-    margin-right: 0px;
+    color: #6b7280;
+    padding: 16px 28px;
+    margin-right: 4px;
     border: none;
-    border-bottom: 2px solid transparent;
-    font-size: 15px;
-    font-weight: 500;
+    border-bottom: 3px solid transparent;
+    font-size: 16px;
+    font-weight: 700;
     min-width: 100px;
 }
 
 QTabBar::tab:selected {
-    background: transparent;
-    color: #5288c1;
-    border-bottom: 2px solid #5288c1;
+    color: #60a5fa;
+    border-bottom: 3px solid #60a5fa;
 }
 
 QTabBar::tab:hover:!selected {
-    color: #a8b4c0;
+    color: #93c5fd;
 }
 
 /* 헤더 */
 QLabel#titleLabel {
-    font-size: 26px;
-    font-weight: 600;
-    color: #ffffff;
-    padding: 20px;
+    font-size: 28px;
+    font-weight: 800;
+    color: #f3f4f6;
+    padding: 20px 24px;
     background: transparent;
+    letter-spacing: -1px;
 }
 
 QLabel#sectionLabel {
-    font-size: 14px;
-    font-weight: 600;
-    color: #ffffff;
-    padding: 4px 0;
+    font-size: 16px;
+    font-weight: 700;
+    color: #e5e7eb;
+    padding: 8px 0;
     background: transparent;
+    letter-spacing: -0.5px;
 }
 
 QLabel {
-    color: #8b98a5;
-    font-size: 13px;
-    background: transparent;
-}
-
-/* 카드 */
-QFrame#card {
-    background: #232e3c;
-    border-radius: 10px;
-    border: 1px solid #2b3745;
-}
-
-/* 입력 필드 - Telegram 스타일 */
-QLineEdit {
-    padding: 12px 14px;
-    border: none;
-    border-radius: 8px;
-    background: #232e3c;
-    color: #ffffff;
+    color: #9ca3af;
     font-size: 14px;
-    selection-background-color: #5288c1;
+    background: transparent;
+    font-weight: 500;
+}
+
+/* 카드 - Dark */
+QFrame#card {
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+        stop:0 rgba(31, 41, 55, 0.8), stop:1 rgba(17, 24, 39, 0.6));
+    border-radius: 16px;
+    border: 1px solid rgba(75, 85, 99, 0.3);
+    padding: 6px;
+}
+
+/* 입력 필드 - Dark */
+QLineEdit {
+    background: rgba(31, 41, 55, 0.6);
+    border: 1.5px solid rgba(75, 85, 99, 0.5);
+    border-radius: 12px;
+    padding: 14px 16px;
+    color: #f3f4f6;
+    font-size: 15px;
+    font-weight: 500;
+    selection-background-color: #3b82f6;
 }
 
 QLineEdit:focus {
-    background: #2b3745;
-    border: 1px solid #5288c1;
+    border: 2px solid #60a5fa;
+    background: rgba(31, 41, 55, 0.9);
+}
+
+QLineEdit:disabled {
+    background: rgba(17, 24, 39, 0.6);
+    color: #4b5563;
+    border-color: rgba(55, 65, 81, 0.5);
 }
 
 QLineEdit::placeholder {
-    color: #5d6d7e;
+    color: #6b7280;
+    font-weight: 400;
 }
 
-/* 버튼 - Telegram 스타일 */
+/* 버튼 - Dark */
 QPushButton {
-    padding: 11px 22px;
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+        stop:0 #3b82f6, stop:1 #2563eb);
+    color: #ffffff;
     border: none;
-    border-radius: 8px;
-    font-size: 14px;
-    font-weight: 500;
-    min-height: 42px;
+    border-radius: 12px;
+    padding: 14px 24px;
+    font-size: 15px;
+    font-weight: 700;
+    min-height: 48px;
 }
 
+QPushButton:hover {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+        stop:0 #60a5fa, stop:1 #3b82f6);
+}
+
+QPushButton:pressed {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+        stop:0 #2563eb, stop:1 #1d4ed8);
+}
+
+QPushButton:disabled {
+    background: rgba(55, 65, 81, 0.5);
+    color: #6b7280;
+}
+
+/* Primary 버튼 */
 QPushButton#primaryButton {
-    background: #5288c1;
-    color: #ffffff;
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+        stop:0 #8b5cf6, stop:1 #7c3aed);
+    font-weight: 800;
+    padding: 16px 28px;
+    font-size: 16px;
+    letter-spacing: -0.3px;
 }
 
 QPushButton#primaryButton:hover {
-    background: #6b9fd8;
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+        stop:0 #a78bfa, stop:1 #8b5cf6);
 }
 
 QPushButton#primaryButton:pressed {
-    background: #4a7bad;
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+        stop:0 #7c3aed, stop:1 #6d28d9);
 }
 
 QPushButton#primaryButton:disabled {
-    background: #3d4f5f;
-    color: #5d6d7e;
+    background: rgba(55, 65, 81, 0.5);
+    color: #6b7280;
 }
 
+/* Search 버튼 */
 QPushButton#searchButton {
-    background: #5288c1;
-    color: #ffffff;
+    background: rgba(55, 65, 81, 0.6);
+    color: #d1d5db;
+    border: none;
 }
 
 QPushButton#searchButton:hover {
-    background: #6b9fd8;
+    background: rgba(75, 85, 99, 0.8);
+    color: #f3f4f6;
 }
 
 QPushButton#searchButton:pressed {
-    background: #4a7bad;
+    background: rgba(55, 65, 81, 0.9);
 }
 
+/* Stop 버튼 */
 QPushButton#stopButton {
-    background: #e74c3c;
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+        stop:0 #ef4444, stop:1 #dc2626);
     color: #ffffff;
 }
 
 QPushButton#stopButton:hover {
-    background: #ec7063;
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+        stop:0 #f87171, stop:1 #ef4444);
 }
 
 QPushButton#stopButton:pressed {
-    background: #c0392b;
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+        stop:0 #dc2626, stop:1 #b91c1c);
 }
 
+/* Clear 버튼 */
 QPushButton#clearButton {
     background: transparent;
-    color: #5288c1;
-    padding: 6px 14px;
-    min-height: 28px;
-    font-size: 13px;
-    border: 1px solid #2b3745;
+    color: #9ca3af;
+    border: 1.5px solid rgba(75, 85, 99, 0.5);
+    padding: 10px 20px;
+    min-height: 40px;
+    font-weight: 600;
 }
 
 QPushButton#clearButton:hover {
-    background: #232e3c;
+    background: rgba(31, 41, 55, 0.5);
+    color: #e5e7eb;
+    border-color: rgba(107, 114, 128, 0.7);
 }
 
-/* 체크박스 - Telegram 스타일 */
+QPushButton#clearButton:pressed {
+    background: rgba(31, 41, 55, 0.8);
+}
+
+/* 체크박스 - Dark */
 QCheckBox {
+    color: #e5e7eb;
     spacing: 10px;
-    font-size: 14px;
-    color: #e4e9ed;
+    font-size: 15px;
+    font-weight: 600;
 }
 
 QCheckBox::indicator {
-    width: 20px;
-    height: 20px;
-    border-radius: 10px;
-    border: 2px solid #5d6d7e;
-    background: transparent;
-}
-
-QCheckBox::indicator:checked {
-    background: #5288c1;
-    border: 2px solid #5288c1;
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+    border: 2px solid #4b5563;
+    background: rgba(31, 41, 55, 0.6);
 }
 
 QCheckBox::indicator:hover {
-    border: 2px solid #5288c1;
+    border-color: #60a5fa;
 }
 
-/* 로그 디스플레이 - Telegram 다크 모드 */
+QCheckBox::indicator:checked {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+        stop:0 #3b82f6, stop:1 #2563eb);
+    border-color: #3b82f6;
+    image: url(none);
+}
+
+/* 로그 디스플레이 - Dark */
 QTextEdit#logDisplay {
-    background: #0e1621;
-    color: #8ec677;
-    border: none;
-    border-radius: 8px;
-    padding: 14px;
-    font-family: "SF Mono", "Monaco", "Consolas", "Courier New", monospace;
-    font-size: 12px;
-    line-height: 1.5;
+    background: rgba(17, 24, 39, 0.8);
+    color: #10b981;
+    border: 1.5px solid rgba(75, 85, 99, 0.3);
+    border-radius: 16px;
+    padding: 20px;
+    font-family: "SF Mono", "D2Coding", "Monaco", "Consolas", "Courier New", monospace;
+    font-size: 13px;
+    line-height: 1.7;
+    font-weight: 500;
 }
 
-/* 스크롤바 - 미니멀 */
+/* 스크롤바 - Dark */
 QScrollBar:vertical {
-    border: none;
     background: transparent;
     width: 8px;
-    margin: 0;
+    border-radius: 4px;
+    margin: 4px;
 }
 
 QScrollBar::handle:vertical {
-    background: #3d4f5f;
+    background: rgba(75, 85, 99, 0.6);
     border-radius: 4px;
-    min-height: 30px;
+    min-height: 40px;
 }
 
 QScrollBar::handle:vertical:hover {
-    background: #4a6075;
+    background: rgba(107, 114, 128, 0.8);
+}
+
+QScrollBar::handle:vertical:pressed {
+    background: rgba(107, 114, 128, 1);
 }
 
 QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
     height: 0px;
 }
 
+QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
+    background: none;
+}
+
 QScrollBar:horizontal {
-    border: none;
     background: transparent;
     height: 8px;
-    margin: 0;
+    border-radius: 4px;
+    margin: 4px;
 }
 
 QScrollBar::handle:horizontal {
-    background: #3d4f5f;
+    background: rgba(75, 85, 99, 0.6);
     border-radius: 4px;
-    min-width: 30px;
+    min-width: 40px;
 }
 
 QScrollBar::handle:horizontal:hover {
-    background: #4a6075;
+    background: rgba(107, 114, 128, 0.8);
 }
 
 QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
     width: 0px;
 }
 
-/* 열차 항목 - Telegram 메시지 스타일 */
+/* 열차 항목 - Dark */
 QFrame#trainItem {
-    background: #232e3c;
-    border: 1px solid #2b3745;
-    border-radius: 8px;
+    background: rgba(31, 41, 55, 0.5);
+    border: 1.5px solid rgba(75, 85, 99, 0.3);
+    border-radius: 16px;
 }
 
 QFrame#trainItem:hover {
-    background: #2b3745;
-    border: 1px solid #5288c1;
+    background: rgba(31, 41, 55, 0.8);
+    border: 1.5px solid rgba(96, 165, 250, 0.5);
 }
 
 QScrollArea {
@@ -486,7 +548,7 @@ class TrainReservationApp(QMainWindow):
         self.ktx_pw_input.setInputMethodHints(Qt.InputMethodHint.ImhLatinOnly)
 
         self.ktx_pw_toggle_btn = QPushButton("Show")
-        self.ktx_pw_toggle_btn.setFixedWidth(60)
+        self.ktx_pw_toggle_btn.setFixedWidth(80)
         self.ktx_pw_toggle_btn.setObjectName("clearButton")
         self.ktx_pw_toggle_btn.clicked.connect(lambda: self.toggle_password_visibility(self.ktx_pw_input, self.ktx_pw_toggle_btn))
 
@@ -513,10 +575,10 @@ class TrainReservationApp(QMainWindow):
         grid.addWidget(QLabel("도착역"), 0, 2)
         grid.addWidget(self.ktx_arr_input, 0, 3)
 
-        self.ktx_date_input = QLineEdit(DEFAULT_DEPARTURE_DATE)
+        self.ktx_date_input = QLineEdit(datetime.datetime.now().strftime("%Y%m%d"))
         self.ktx_date_input.setPlaceholderText("YYYYMMDD")
         self.ktx_time_input = QLineEdit(
-            datetime.datetime.strptime(DEFAULT_KTX_TIME, "%H%M%S").strftime("%H%M")
+            datetime.datetime.now().strftime("%H%M")
         )
         self.ktx_time_input.setPlaceholderText("HHMM")
 
@@ -526,6 +588,38 @@ class TrainReservationApp(QMainWindow):
         grid.addWidget(self.ktx_time_input, 1, 3)
 
         search_card.add_layout(grid)
+
+        # 승객 수 - 한 줄에 3개
+        passenger_layout = QHBoxLayout()
+        passenger_layout.setSpacing(12)
+
+        self.ktx_adult_input = QLineEdit("1")
+        self.ktx_adult_input.setPlaceholderText("어른")
+        self.ktx_child_input = QLineEdit("0")
+        self.ktx_child_input.setPlaceholderText("어린이")
+        self.ktx_senior_input = QLineEdit("0")
+        self.ktx_senior_input.setPlaceholderText("경로")
+
+        adult_layout = QVBoxLayout()
+        adult_layout.setSpacing(4)
+        adult_layout.addWidget(QLabel("어른"))
+        adult_layout.addWidget(self.ktx_adult_input)
+
+        child_layout = QVBoxLayout()
+        child_layout.setSpacing(4)
+        child_layout.addWidget(QLabel("어린이"))
+        child_layout.addWidget(self.ktx_child_input)
+
+        senior_layout = QVBoxLayout()
+        senior_layout.setSpacing(4)
+        senior_layout.addWidget(QLabel("경로"))
+        senior_layout.addWidget(self.ktx_senior_input)
+
+        passenger_layout.addLayout(adult_layout)
+        passenger_layout.addLayout(child_layout)
+        passenger_layout.addLayout(senior_layout)
+
+        search_card.add_layout(passenger_layout)
 
         self.ktx_search_btn = QPushButton("🔍 열차 검색")
         self.ktx_search_btn.setObjectName("searchButton")
@@ -644,7 +738,7 @@ class TrainReservationApp(QMainWindow):
         self.srt_pw_input.setInputMethodHints(Qt.InputMethodHint.ImhLatinOnly)
 
         self.srt_pw_toggle_btn = QPushButton("Show")
-        self.srt_pw_toggle_btn.setFixedWidth(60)
+        self.srt_pw_toggle_btn.setFixedWidth(80)
         self.srt_pw_toggle_btn.setObjectName("clearButton")
         self.srt_pw_toggle_btn.clicked.connect(lambda: self.toggle_password_visibility(self.srt_pw_input, self.srt_pw_toggle_btn))
 
@@ -671,10 +765,10 @@ class TrainReservationApp(QMainWindow):
         grid.addWidget(QLabel("도착역"), 0, 2)
         grid.addWidget(self.srt_arr_input, 0, 3)
 
-        self.srt_date_input = QLineEdit(DEFAULT_DEPARTURE_DATE)
+        self.srt_date_input = QLineEdit(datetime.datetime.now().strftime("%H%m%s"))
         self.srt_date_input.setPlaceholderText("YYYYMMDD")
         self.srt_time_input = QLineEdit(
-            datetime.datetime.strptime(DEFAULT_SRT_TIME, "%H%M%S").strftime("%H%M")
+            datetime.datetime.now().strftime("%H%M")
         )
         self.srt_time_input.setPlaceholderText("HHMM")
 
@@ -684,6 +778,38 @@ class TrainReservationApp(QMainWindow):
         grid.addWidget(self.srt_time_input, 1, 3)
 
         search_card.add_layout(grid)
+
+        # 승객 수 - 한 줄에 3개
+        passenger_layout = QHBoxLayout()
+        passenger_layout.setSpacing(12)
+
+        self.srt_adult_input = QLineEdit("1")
+        self.srt_adult_input.setPlaceholderText("어른")
+        self.srt_child_input = QLineEdit("0")
+        self.srt_child_input.setPlaceholderText("어린이")
+        self.srt_senior_input = QLineEdit("0")
+        self.srt_senior_input.setPlaceholderText("경로")
+
+        adult_layout = QVBoxLayout()
+        adult_layout.setSpacing(4)
+        adult_layout.addWidget(QLabel("어른"))
+        adult_layout.addWidget(self.srt_adult_input)
+
+        child_layout = QVBoxLayout()
+        child_layout.setSpacing(4)
+        child_layout.addWidget(QLabel("어린이"))
+        child_layout.addWidget(self.srt_child_input)
+
+        senior_layout = QVBoxLayout()
+        senior_layout.setSpacing(4)
+        senior_layout.addWidget(QLabel("경로"))
+        senior_layout.addWidget(self.srt_senior_input)
+
+        passenger_layout.addLayout(adult_layout)
+        passenger_layout.addLayout(child_layout)
+        passenger_layout.addLayout(senior_layout)
+
+        search_card.add_layout(passenger_layout)
 
         self.srt_search_btn = QPushButton("🔍 열차 검색")
         self.srt_search_btn.setObjectName("searchButton")
@@ -777,16 +903,27 @@ class TrainReservationApp(QMainWindow):
 
     def create_log_section(self):
         """로그 섹션 생성"""
-        card = SectionCard("📋 실행 로그")
+        # 카드 프레임
+        card = QFrame()
+        card.setObjectName("card")
 
-        # 클리어 버튼
+        main_layout = QVBoxLayout(card)
+        main_layout.setSpacing(12)
+        main_layout.setContentsMargins(20, 20, 20, 20)
+
+        # 헤더 (제목 + 지우기 버튼)
         header_layout = QHBoxLayout()
+        title_label = QLabel("📋 실행 로그")
+        title_label.setObjectName("sectionLabel")
+        header_layout.addWidget(title_label)
         header_layout.addStretch()
+
         clear_btn = QPushButton("🗑️ 지우기")
         clear_btn.setObjectName("clearButton")
         clear_btn.clicked.connect(self.clear_log)
         header_layout.addWidget(clear_btn)
-        card.add_layout(header_layout)
+
+        main_layout.addLayout(header_layout)
 
         # 로그 디스플레이
         self.log_display = QTextEdit()
@@ -794,7 +931,7 @@ class TrainReservationApp(QMainWindow):
         self.log_display.setReadOnly(True)
         self.log_display.setMinimumHeight(200)
         self.log_display.setMaximumHeight(250)
-        card.add_widget(self.log_display)
+        main_layout.addWidget(self.log_display)
 
         return card
 
@@ -839,11 +976,7 @@ class TrainReservationApp(QMainWindow):
         """KTX 검색 스레드"""
         # 로그인 정보 검증
         if not self.ktx_id_input.text().strip() or not self.ktx_pw_input.text().strip():
-            QTimer.singleShot(0, lambda: QMessageBox.warning(
-                self,
-                "입력 오류",
-                "아이디와 비밀번호를 입력해주세요."
-            ))
+            self.add_log("✗ 입력 오류: 아이디와 비밀번호를 입력해주세요")
             return
 
         self.ktx_search_btn.setEnabled(False)
@@ -853,12 +986,7 @@ class TrainReservationApp(QMainWindow):
             login_result = self.ktx_service.login(self.ktx_id_input.text(), self.ktx_pw_input.text())
 
             if not login_result:
-                self.add_log("✗ 로그인 실패")
-                QTimer.singleShot(0, lambda: QMessageBox.critical(
-                    self,
-                    "로그인 실패",
-                    "아이디 또는 비밀번호가 올바르지 않습니다."
-                ))
+                self.add_log("✗ 로그인 실패: 아이디 또는 비밀번호가 올바르지 않습니다")
                 self.ktx_search_btn.setEnabled(True)
                 return
 
@@ -868,12 +996,30 @@ class TrainReservationApp(QMainWindow):
             departure_date = datetime.datetime.strptime(self.ktx_date_input.text(), "%Y%m%d").date()
             departure_time = self.ktx_time_input.text() + "00"
 
+            # 승객 정보 수집
+            passengers = []
+            adult_count = int(self.ktx_adult_input.text() or "0")
+            child_count = int(self.ktx_child_input.text() or "0")
+            senior_count = int(self.ktx_senior_input.text() or "0")
+
+            if adult_count > 0:
+                passengers.append(Passenger(PassengerType.ADULT, adult_count))
+            if child_count > 0:
+                passengers.append(Passenger(PassengerType.CHILD, child_count))
+            if senior_count > 0:
+                passengers.append(Passenger(PassengerType.SENIOR, senior_count))
+
+            if not passengers:
+                self.add_log("✗ 최소 1명 이상의 승객이 필요합니다")
+                self.ktx_search_btn.setEnabled(True)
+                return
+
             request = ReservationRequest(
                 departure_station=self.ktx_dep_input.text(),
                 arrival_station=self.ktx_arr_input.text(),
                 departure_date=departure_date,
                 departure_time=departure_time,
-                passengers=[Passenger(PassengerType.ADULT, 1)],
+                passengers=passengers,
                 train_type=TrainType.KTX
             )
 
@@ -887,12 +1033,7 @@ class TrainReservationApp(QMainWindow):
                 self.add_log("✗ 열차를 찾을 수 없습니다")
 
         except Exception as e:
-            self.add_log(f"✗ 오류: {str(e)}")
-            QTimer.singleShot(0, lambda: QMessageBox.critical(
-                self,
-                "오류",
-                f"로그인 중 오류가 발생했습니다.\n{str(e)}"
-            ))
+            self.add_log(f"✗ 로그인 중 오류가 발생했습니다: {str(e)}")
 
         finally:
             self.ktx_search_btn.setEnabled(True)
@@ -1036,11 +1177,7 @@ class TrainReservationApp(QMainWindow):
         """SRT 검색 스레드"""
         # 로그인 정보 검증
         if not self.srt_id_input.text().strip() or not self.srt_pw_input.text().strip():
-            QTimer.singleShot(0, lambda: QMessageBox.warning(
-                self,
-                "입력 오류",
-                "아이디와 비밀번호를 입력해주세요."
-            ))
+            self.add_log("✗ 입력 오류: 아이디와 비밀번호를 입력해주세요")
             return
 
         self.srt_search_btn.setEnabled(False)
@@ -1050,12 +1187,7 @@ class TrainReservationApp(QMainWindow):
             login_result = self.srt_service.login(self.srt_id_input.text(), self.srt_pw_input.text())
 
             if not login_result:
-                self.add_log("✗ 로그인 실패")
-                QTimer.singleShot(0, lambda: QMessageBox.critical(
-                    self,
-                    "로그인 실패",
-                    "아이디 또는 비밀번호가 올바르지 않습니다."
-                ))
+                self.add_log("✗ 로그인 실패: 아이디 또는 비밀번호가 올바르지 않습니다")
                 self.srt_search_btn.setEnabled(True)
                 return
 
@@ -1065,12 +1197,30 @@ class TrainReservationApp(QMainWindow):
             departure_date = datetime.datetime.strptime(self.srt_date_input.text(), "%Y%m%d").date()
             departure_time = self.srt_time_input.text() + "00"
 
+            # 승객 정보 수집
+            passengers = []
+            adult_count = int(self.srt_adult_input.text() or "0")
+            child_count = int(self.srt_child_input.text() or "0")
+            senior_count = int(self.srt_senior_input.text() or "0")
+
+            if adult_count > 0:
+                passengers.append(Passenger(PassengerType.ADULT, adult_count))
+            if child_count > 0:
+                passengers.append(Passenger(PassengerType.CHILD, child_count))
+            if senior_count > 0:
+                passengers.append(Passenger(PassengerType.SENIOR, senior_count))
+
+            if not passengers:
+                self.add_log("✗ 최소 1명 이상의 승객이 필요합니다")
+                self.srt_search_btn.setEnabled(True)
+                return
+
             request = ReservationRequest(
                 departure_station=self.srt_dep_input.text(),
                 arrival_station=self.srt_arr_input.text(),
                 departure_date=departure_date,
                 departure_time=departure_time,
-                passengers=[Passenger(PassengerType.ADULT, 1)],
+                passengers=passengers,
                 train_type=TrainType.SRT
             )
 
@@ -1084,12 +1234,7 @@ class TrainReservationApp(QMainWindow):
                 self.add_log("✗ 열차를 찾을 수 없습니다")
 
         except Exception as e:
-            self.add_log(f"✗ 오류: {str(e)}")
-            QTimer.singleShot(0, lambda: QMessageBox.critical(
-                self,
-                "오류",
-                f"로그인 중 오류가 발생했습니다.\n{str(e)}"
-            ))
+            self.add_log(f"✗ 로그인 중 오류가 발생했습니다: {str(e)}")
 
         finally:
             self.srt_search_btn.setEnabled(True)
