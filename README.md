@@ -7,6 +7,8 @@
 [![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org)
 [![PyQt6](https://img.shields.io/badge/PyQt6-41CD52?style=for-the-badge&logo=qt&logoColor=white)](https://www.riverbankcomputing.com/software/pyqt/)
 [![uv](https://img.shields.io/badge/uv-package_manager-DE5FE9?style=for-the-badge)](https://github.com/astral-sh/uv)
+[![Tests](https://img.shields.io/github/actions/workflow/status/leegyurak/ktx-srt-macro/test.yml?branch=main&style=for-the-badge&label=Tests)](https://github.com/leegyurak/ktx-srt-macro/actions/workflows/test.yml)
+[![codecov](https://img.shields.io/codecov/c/github/leegurak/ktx-srt-macro?style=for-the-badge&logo=codecov&logoColor=white)](https://codecov.io/gh/leegyurak/ktx-srt-macro)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
 
 ---
@@ -160,6 +162,30 @@ uv run python main.py
 
 ## 🛠️ 개발자 가이드
 
+### 🧪 테스트 실행
+
+프로젝트는 포괄적인 테스트 스위트를 포함하고 있습니다.
+
+```bash
+# 모든 테스트 실행
+uv run pytest tests/ -v
+
+# 테스트 커버리지 포함
+uv run pytest tests/ -v --cov=src --cov-report=html
+
+# 특정 테스트만 실행
+uv run pytest tests/unit/ -v                    # 단위 테스트만
+uv run pytest tests/integration/ -v             # 통합 테스트만
+uv run pytest tests/ -k "external" -v           # 외부 모듈 테스트만
+```
+
+커버리지 리포트는 `htmlcov/index.html`에서 확인할 수 있습니다.
+
+**CI/CD**: 모든 Push와 Pull Request에 대해 자동으로 테스트가 실행됩니다.
+- 3개 OS (Ubuntu, Windows, macOS)
+- 3개 Python 버전 (3.11, 3.12, 3.13)
+- 총 9개 조합에서 테스트
+
 ### 📦 독립 실행 파일 빌드
 
 #### 로컬에서 빌드
@@ -172,7 +198,7 @@ uv sync
 # 빌드 실행
 uv run pyinstaller --name KTX-SRT-Macro --onefile --windowed \
   --icon "assets/favicon.ico" --add-data "src;src" --add-data "assets;assets" \
-  --noupx --version-file version.txt main.py
+  --noupx main.py
 ```
 
 **macOS**

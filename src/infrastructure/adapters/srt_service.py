@@ -4,9 +4,9 @@ from src.domain.services.train_service import TrainService
 from src.domain.models.entities import (
     Station, TrainSchedule, ReservationRequest, ReservationResult, CreditCard, PaymentResult
 )
-from src.domain.models.entities import Passenger
-from src.domain.models.enums import PassengerType, TrainType
-from src.infrastructure.external.srt import SRT, Adult, Child, Senior
+from src.domain.models.enums import TrainType
+from src.infrastructure.external.srt import SRT
+from src.infrastructure.mappers import PassengerMapper
 from src.constants.stations import SRT_STATIONS
 
 
@@ -40,8 +40,8 @@ class SRTService(TrainService):
         """Search for available SRT trains"""
         if not self._logged_in:
             return []
-        
-        passengers = self._convert_passengers(request.passengers)
+
+        passengers = [PassengerMapper.to_srt(p) for p in request.passengers]
 
         try:
             # Convert domain request to SRT format
@@ -79,7 +79,7 @@ class SRTService(TrainService):
 
         try:
             # Convert passengers to SRT format
-            passengers = self._convert_passengers(request.passengers)
+            passengers = [PassengerMapper.to_srt(p) for p in request.passengers]
 
             # Find the train again for reservation
             trains = self._srt.search_train(
@@ -165,30 +165,6 @@ class SRTService(TrainService):
     def _parse_time(self, time_str: str) -> datetime:
         """Parse time string to datetime"""
         return datetime.strptime(time_str, "%Y%m%d%H%M%S")
-    
-    def _convert_passengers(self, passengers: list[Passenger]) -> list[Adult | Child | Senior]:
-        srt_passengers = []
-        for passenger in passengers:
-            match passenger.passenger_type:
-                case PassengerType.ADULT:
-                    srt_passengers.append(
-                        Adult(
-                            count=passenger.count,
-                        ),
-                    )
-                case PassengerType.CHILD:
-                    srt_passengers.append(
-                        Child(
-                            count=passenger.count,
-                        ),
-                    )
-                case PassengerType.SENIOR:
-                    srt_passengers.append(
-                        Senior(
-                            count=passenger.count,
-                        ),
-                    )
-        return srt_passengers
 
     def _get_available_seats(self, train) -> int:
         """Get available seats count"""

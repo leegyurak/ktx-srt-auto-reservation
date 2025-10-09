@@ -1090,6 +1090,19 @@ class TrainReservationApp(QMainWindow):
         selected_trains = [self.ktx_trains[i] for i in selected_indices]
         attempt = 0
 
+        # 승객 정보 수집
+        passengers = []
+        adult_count = int(self.ktx_adult_input.text() or "0")
+        child_count = int(self.ktx_child_input.text() or "0")
+        senior_count = int(self.ktx_senior_input.text() or "0")
+
+        if adult_count > 0:
+            passengers.append(Passenger(PassengerType.ADULT, adult_count))
+        if child_count > 0:
+            passengers.append(Passenger(PassengerType.CHILD, child_count))
+        if senior_count > 0:
+            passengers.append(Passenger(PassengerType.SENIOR, senior_count))
+
         while self.is_ktx_running:
             attempt += 1
             self.add_log(f"🔄 예약 시도 #{attempt}")
@@ -1106,7 +1119,7 @@ class TrainReservationApp(QMainWindow):
                         arrival_station=train.arrival_station,
                         departure_date=train.departure_time.date(),
                         departure_time=train.departure_time.strftime("%H%M%S"),
-                        passengers=[Passenger(PassengerType.ADULT, 1)],
+                        passengers=passengers,
                         train_type=TrainType.KTX
                     )
                     reservation = self.ktx_service.reserve_train(train, request)
@@ -1291,6 +1304,19 @@ class TrainReservationApp(QMainWindow):
         selected_trains: list[TrainSchedule] = [self.srt_trains[i] for i in selected_indices]
         attempt = 0
 
+        # 승객 정보 수집
+        passengers = []
+        adult_count = int(self.srt_adult_input.text() or "0")
+        child_count = int(self.srt_child_input.text() or "0")
+        senior_count = int(self.srt_senior_input.text() or "0")
+
+        if adult_count > 0:
+            passengers.append(Passenger(PassengerType.ADULT, adult_count))
+        if child_count > 0:
+            passengers.append(Passenger(PassengerType.CHILD, child_count))
+        if senior_count > 0:
+            passengers.append(Passenger(PassengerType.SENIOR, senior_count))
+
         while self.is_srt_running:
             attempt += 1
             self.add_log(f"🔄 예약 시도 #{attempt}")
@@ -1306,7 +1332,7 @@ class TrainReservationApp(QMainWindow):
                         arrival_station=train.arrival_station,
                         departure_date=train.departure_time.date(),
                         departure_time=train.departure_time.strftime("%H%M%S"),
-                        passengers=[Passenger(PassengerType.ADULT, 1)],
+                        passengers=passengers,
                         train_type=TrainType.SRT
                     )
                     reservation = self.srt_service.reserve_train(train, request)
