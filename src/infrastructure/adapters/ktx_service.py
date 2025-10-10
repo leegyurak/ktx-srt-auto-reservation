@@ -47,7 +47,7 @@ class KTXService(TrainService):
                 dep=request.departure_station,
                 arr=request.arrival_station,
                 date=request.departure_date.strftime("%Y%m%d"),
-                time=request.departure_time or "000000",
+                time=request.departure_time,
                 train_type=KorailTrainType.KTX,
                 include_no_seats=True,
             )
@@ -85,6 +85,7 @@ class KTXService(TrainService):
                 arr=request.arrival_station,
                 date=request.departure_date.strftime("%Y%m%d"),
                 time=request.departure_time,
+                passengers=passengers,
                 train_type=KorailTrainType.KTX,
                 include_no_seats=True,
             )
@@ -102,7 +103,7 @@ class KTXService(TrainService):
                 return ReservationResult(success=False, message="No available seats")
 
             # Make reservation
-            reservation = self._korail.reserve(target_train, passengers)
+            reservation = self._korail.reserve(train=target_train, passengers=passengers)
 
             if reservation:
                 return ReservationResult(

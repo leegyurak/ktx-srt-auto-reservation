@@ -765,7 +765,7 @@ class TrainReservationApp(QMainWindow):
         grid.addWidget(QLabel("도착역"), 0, 2)
         grid.addWidget(self.srt_arr_input, 0, 3)
 
-        self.srt_date_input = QLineEdit(datetime.datetime.now().strftime("%H%m%s"))
+        self.srt_date_input = QLineEdit(datetime.datetime.now().strftime("%Y%m%d"))
         self.srt_date_input.setPlaceholderText("YYYYMMDD")
         self.srt_time_input = QLineEdit(
             datetime.datetime.now().strftime("%H%M")

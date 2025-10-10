@@ -11,21 +11,21 @@ class PassengerMapper:
     @staticmethod
     def to_korail(passenger: Passenger) -> KorailPessenger:
         """Convert a single domain passenger to Korail format"""
-        match passenger.passenger_type:
-            case PassengerType.ADULT:
+        match passenger.passenger_type.value:
+            case PassengerType.ADULT.value:
                 return AdultPassenger(count=passenger.count)
-            case PassengerType.CHILD:
+            case PassengerType.CHILD.value:
                 return ChildPassenger(count=passenger.count)
-            case PassengerType.SENIOR:
+            case PassengerType.SENIOR.value:
                 return SeniorPassenger(count=passenger.count)
 
     @staticmethod
     def to_srt(passenger: Passenger) -> SRTPessenger:
         """Convert a single domain passenger to SRT format"""
-        match passenger.passenger_type:
-            case PassengerType.ADULT:
+        match passenger.passenger_type.value:
+            case PassengerType.ADULT.value: 
                 return Adult(count=passenger.count)
-            case PassengerType.CHILD:
+            case PassengerType.CHILD.value:
                 return Child(count=passenger.count)
-            case PassengerType.SENIOR:
+            case PassengerType.SENIOR.value:
                 return Senior(count=passenger.count)

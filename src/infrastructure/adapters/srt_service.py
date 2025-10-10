@@ -104,7 +104,7 @@ class SRTService(TrainService):
                 return ReservationResult(success=False, message="No available seats")
 
             # Make reservation
-            reservation = self._srt.reserve(target_train, passengers)
+            reservation = self._srt.reserve(train=target_train, passengers=passengers)
 
             if reservation:
                 return ReservationResult(
