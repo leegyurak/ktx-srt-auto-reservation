@@ -1,13 +1,13 @@
-name: Build KTX/SRT Macro
+name: Build and Release
 
 on:
   push:
-    branches: [ main, master ]
     tags:
-      - 'v*'
-  pull_request:
-    branches: [ main, master ]
-  workflow_dispatch:
+      - 'v*.*.*'  # v1.0.0, v1.2.3 등의 버전 태그에만 반응
+  workflow_dispatch:  # 수동 실행 가능
+
+permissions:
+  contents: write  # 릴리스 생성을 위한 권한
 
 jobs:
   build-windows:
@@ -30,11 +30,16 @@ jobs:
         run: |
           uv run pyinstaller --name KTX-SRT-Macro --onefile --windowed --icon "assets/favicon.ico" --add-data "src;src" --add-data "assets;assets" --noupx main.py
 
+      - name: Rename Windows executable
+        run: |
+          cd dist
+          ren KTX-SRT-Macro.exe KTX-SRT-Macro-Windows.exe
+
       - name: Upload Windows artifact
         uses: actions/upload-artifact@v4
         with:
           name: KTX-SRT-Macro-Windows
-          path: dist/
+          path: dist/KTX-SRT-Macro-Windows.exe
 
   build-macos:
     runs-on: macos-latest
@@ -56,8 +61,95 @@ jobs:
         run: |
           uv run pyinstaller --name KTX-SRT-Macro --onefile --windowed --icon "assets/favicon.icns" --add-data "src:src" --add-data "assets:assets" main.py
 
+      - name: Create macOS DMG (optional - app bundle as-is)
+        run: |
+          cd dist
+          mv KTX-SRT-Macro KTX-SRT-Macro-macOS
+
       - name: Upload macOS artifact
         uses: actions/upload-artifact@v4
         with:
           name: KTX-SRT-Macro-macOS
-          path: dist/
+          path: dist/KTX-SRT-Macro-macOS
+
+  create-release:
+    needs: [build-windows, build-macos]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # 전체 히스토리 가져오기 (changelog 생성용)
+
+      - name: Download Windows artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: KTX-SRT-Macro-Windows
+          path: ./artifacts/windows
+
+      - name: Download macOS artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: KTX-SRT-Macro-macOS
+          path: ./artifacts/macos
+
+      - name: Get version from tag
+        id: get_version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          # 이전 태그 찾기
+          PREVIOUS_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+
+          # 릴리스 노트 생성
+          if [ -z "$PREVIOUS_TAG" ]; then
+            echo "CHANGELOG<<EOF" >> $GITHUB_OUTPUT
+            echo "## 🎉 첫 번째 릴리스" >> $GITHUB_OUTPUT
+            echo "" >> $GITHUB_OUTPUT
+            echo "### ✨ 주요 기능" >> $GITHUB_OUTPUT
+            echo "- KTX/SRT 자동 예약" >> $GITHUB_OUTPUT
+            echo "- 플랫폼별 보안 저장소 지원 (Keychain, Credential Locker)" >> $GITHUB_OUTPUT
+            echo "- 자동 결제 기능" >> $GITHUB_OUTPUT
+            echo "" >> $GITHUB_OUTPUT
+            echo "### 📥 다운로드" >> $GITHUB_OUTPUT
+            echo "- **Windows**: \`KTX-SRT-Macro-Windows.exe\` 다운로드" >> $GITHUB_OUTPUT
+            echo "- **macOS**: \`KTX-SRT-Macro-macOS\` 다운로드 후 실행 권한 부여 필요" >> $GITHUB_OUTPUT
+            echo "" >> $GITHUB_OUTPUT
+            echo "### 📝 변경 사항" >> $GITHUB_OUTPUT
+            git log --pretty=format:"- %s (%h)" >> $GITHUB_OUTPUT
+            echo "" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+          else
+            echo "CHANGELOG<<EOF" >> $GITHUB_OUTPUT
+            echo "## 📦 릴리스 노트" >> $GITHUB_OUTPUT
+            echo "" >> $GITHUB_OUTPUT
+            echo "### 📥 다운로드" >> $GITHUB_OUTPUT
+            echo "- **Windows**: \`KTX-SRT-Macro-Windows.exe\` 다운로드 후 실행" >> $GITHUB_OUTPUT
+            echo "- **macOS**: \`KTX-SRT-Macro-macOS\` 다운로드" >> $GITHUB_OUTPUT
+            echo "  - 터미널에서 \`chmod +x KTX-SRT-Macro-macOS\` 실행" >> $GITHUB_OUTPUT
+            echo "  - 또는 시스템 환경설정 > 보안 및 개인정보 보호에서 실행 허용" >> $GITHUB_OUTPUT
+            echo "" >> $GITHUB_OUTPUT
+            echo "### 📝 변경 사항 (\`$PREVIOUS_TAG\` 이후)" >> $GITHUB_OUTPUT
+            git log $PREVIOUS_TAG..HEAD --pretty=format:"- %s (%h)" --no-merges >> $GITHUB_OUTPUT
+            echo "" >> $GITHUB_OUTPUT
+            echo "" >> $GITHUB_OUTPUT
+            echo "### 👥 기여자" >> $GITHUB_OUTPUT
+            git log $PREVIOUS_TAG..HEAD --pretty=format:"- @%an" --no-merges | sort -u >> $GITHUB_OUTPUT
+            echo "" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.get_version.outputs.VERSION }}
+          name: Release ${{ steps.get_version.outputs.VERSION }}
+          body: ${{ steps.changelog.outputs.CHANGELOG }}
+          draft: false
+          prerelease: false
+          files: |
+            ./artifacts/windows/KTX-SRT-Macro-Windows.exe
+            ./artifacts/macos/KTX-SRT-Macro-macOS
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

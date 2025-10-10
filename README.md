@@ -5,10 +5,9 @@
 **빠르고 편리한 기차표 예약을 위한 스마트 솔루션**
 
 [![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org)
-[![PyQt6](https://img.shields.io/badge/PyQt6-41CD52?style=for-the-badge&logo=qt&logoColor=white)](https://www.riverbankcomputing.com/software/pyqt/)
 [![uv](https://img.shields.io/badge/uv-package_manager-DE5FE9?style=for-the-badge)](https://github.com/astral-sh/uv)
 [![Tests](https://img.shields.io/github/actions/workflow/status/leegyurak/ktx-srt-macro/test.yml?branch=main&style=for-the-badge&label=Tests)](https://github.com/leegyurak/ktx-srt-macro/actions/workflows/test.yml)
-[![codecov](https://img.shields.io/codecov/c/github/leegurak/ktx-srt-macro?style=for-the-badge&logo=codecov&logoColor=white)](https://codecov.io/gh/leegyurak/ktx-srt-macro)
+[![codecov](https://img.shields.io/codecov/c/github/leegyurak/ktx-srt-macro?style=for-the-badge&logo=codecov&logoColor=white)](https://codecov.io/gh/leegyurak/ktx-srt-macro)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
 
 ---
@@ -226,22 +225,31 @@ uv run pyinstaller --name KTX-SRT-Macro --onefile --windowed \
 
 빌드된 실행 파일은 `dist/` 디렉토리에 생성됩니다.
 
-#### GitHub Actions 자동 빌드
+#### GitHub Actions 자동 빌드 및 릴리스
 
-태그를 푸시하면 자동으로 Windows와 macOS용 실행 파일을 빌드하고 릴리스를 생성합니다:
+버전 태그를 푸시하면 자동으로 Windows와 macOS용 실행 파일을 빌드하고 릴리스를 생성합니다:
 
 ```bash
-# 새 버전 태그 생성
+# 새 버전 태그 생성 (Semantic Versioning 형식)
 git tag v1.0.0
 
 # 태그 푸시
 git push origin v1.0.0
 
 # GitHub Actions가 자동으로:
-# 1. Windows/macOS 빌드 실행
-# 2. 릴리스 생성
-# 3. 실행 파일 업로드
+# 1. Windows와 macOS용 실행 파일 빌드
+# 2. 자동 릴리스 노트 생성
+#    - 이전 릴리스 이후 변경 사항
+#    - 다운로드 가이드
+#    - 기여자 목록
+# 3. GitHub Releases 페이지에 릴리스 생성
+# 4. 빌드된 실행 파일 자동 업로드
 ```
+
+> 📌 **참고**:
+> - 태그는 반드시 `v*.*.*` 형식이어야 합니다 (예: v1.0.0, v2.1.3)
+> - 릴리스 노트는 이전 태그와 비교하여 자동으로 생성됩니다
+> - 첫 번째 릴리스의 경우 전체 커밋 히스토리가 포함됩니다
 
 ### 📁 프로젝트 구조
 
