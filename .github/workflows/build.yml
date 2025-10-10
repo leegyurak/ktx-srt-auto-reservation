@@ -59,12 +59,19 @@ jobs:
 
       - name: Build macOS app
         run: |
-          uv run pyinstaller --name KTX-SRT-Macro --windowed --icon "assets/favicon.icns" --add-data "src:src" --add-data "assets:assets" main.py
+          uv run pyinstaller --name KTX-SRT-Macro --windowed --icon "assets/favicon.icns" --add-data "src:src" --add-data "assets:assets" --hidden-import PyQt6.QtCore --hidden-import PyQt6.QtGui --hidden-import PyQt6.QtWidgets --collect-all PyQt6 --osx-bundle-identifier com.leegyurak.ktx-srt-macro main.py
 
       - name: Create macOS zip
         run: |
           cd dist
-          zip -r KTX-SRT-Macro-macOS.zip KTX-SRT-Macro.app
+          # .app 번들이 제대로 생성되었는지 확인
+          ls -la
+          if [ -d "KTX-SRT-Macro.app" ]; then
+            zip -r -y KTX-SRT-Macro-macOS.zip KTX-SRT-Macro.app
+          else
+            echo "Error: KTX-SRT-Macro.app not found!"
+            exit 1
+          fi
 
       - name: Upload macOS artifact
         uses: actions/upload-artifact@v4
