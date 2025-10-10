@@ -1107,7 +1107,7 @@ class TrainReservationApp(QMainWindow):
             attempt += 1
             self.add_log(f"🔄 예약 시도 #{attempt}")
 
-            for train in selected_trains:
+            for idx, train in enumerate(selected_trains):
                 if not self.is_ktx_running:
                     break
 
@@ -1165,8 +1165,9 @@ class TrainReservationApp(QMainWindow):
                             return  # 다른 열차는 시도하지 않고 종료
                     else:
                         self.add_log(f"  ✗ {train.train_number} 예약 실패: {reservation.message}")
-                        delay = random.uniform(RETRY_DELAY_MIN, RETRY_DELAY_MAX)
-                        time.sleep(delay)
+                        if not idx == len(selected_trains) - 1:  # 마지막 열차가 아니라면 랜덤 딜레이 후 재시도
+                            delay = random.uniform(RETRY_DELAY_MIN, RETRY_DELAY_MAX)
+                            time.sleep(delay)
 
                 except Exception as e:
                     self.add_log(f"  ✗ 오류: {str(e)}")
@@ -1323,7 +1324,7 @@ class TrainReservationApp(QMainWindow):
             attempt += 1
             self.add_log(f"🔄 예약 시도 #{attempt}")
 
-            for train in selected_trains:
+            for idx, train in enumerate(selected_trains):
                 if not self.is_srt_running:
                     break
 
@@ -1380,8 +1381,9 @@ class TrainReservationApp(QMainWindow):
                             return  # 다른 열차는 시도하지 않고 종료
                     else:
                         self.add_log(f"  ✗ {train.train_number} 예약 실패: {reservation.message}")
-                        delay = random.uniform(RETRY_DELAY_MIN, RETRY_DELAY_MAX)
-                        time.sleep(delay)
+                        if not idx == len(selected_trains) - 1:  # 마지막 열차가 아니라면 랜덤 딜레이 후 재시도
+                            delay = random.uniform(RETRY_DELAY_MIN, RETRY_DELAY_MAX)
+                            time.sleep(delay)
 
                 except Exception as e:
                     self.add_log(f"  ✗ 오류: {str(e)}")
