@@ -986,19 +986,6 @@ class TrainReservationApp(QMainWindow):
             self.ktx_pw_input.setText(ktx_login.password)
             self.ktx_save_login_check.setChecked(True)
 
-        # KTX 결제 정보 로드
-        ktx_payment = CredentialStorage.load_ktx_payment()
-        if ktx_payment:
-            self.ktx_payment_card_num_input.setText(ktx_payment.card_number)
-            self.ktx_payment_card_pw_input.setText(ktx_payment.card_password)
-            self.ktx_payment_expire_input.setText(ktx_payment.expire)
-            self.ktx_payment_corporate_check.setChecked(ktx_payment.is_corporate)
-            if ktx_payment.is_corporate:
-                self.ktx_payment_business_num_input.setText(ktx_payment.validation_number)
-            else:
-                self.ktx_payment_birth_input.setText(ktx_payment.validation_number)
-            self.ktx_save_payment_check.setChecked(True)
-
         # SRT 로그인 정보 로드
         srt_login = CredentialStorage.load_srt_login()
         if srt_login:
@@ -1006,17 +993,29 @@ class TrainReservationApp(QMainWindow):
             self.srt_pw_input.setText(srt_login.password)
             self.srt_save_login_check.setChecked(True)
 
-        # SRT 결제 정보 로드
-        srt_payment = CredentialStorage.load_srt_payment()
-        if srt_payment:
-            self.srt_payment_card_num_input.setText(srt_payment.card_number)
-            self.srt_payment_card_pw_input.setText(srt_payment.card_password)
-            self.srt_payment_expire_input.setText(srt_payment.expire)
-            self.srt_payment_corporate_check.setChecked(srt_payment.is_corporate)
-            if srt_payment.is_corporate:
-                self.srt_payment_business_num_input.setText(srt_payment.validation_number)
+        # 결제 정보 로드 (KTX/SRT 공통)
+        payment = CredentialStorage.load_payment()
+        if payment:
+            # KTX 결제 정보 입력
+            self.ktx_payment_card_num_input.setText(payment.card_number)
+            self.ktx_payment_card_pw_input.setText(payment.card_password)
+            self.ktx_payment_expire_input.setText(payment.expire)
+            self.ktx_payment_corporate_check.setChecked(payment.is_corporate)
+            if payment.is_corporate:
+                self.ktx_payment_business_num_input.setText(payment.validation_number)
             else:
-                self.srt_payment_birth_input.setText(srt_payment.validation_number)
+                self.ktx_payment_birth_input.setText(payment.validation_number)
+            self.ktx_save_payment_check.setChecked(True)
+
+            # SRT 결제 정보 입력 (동일한 정보)
+            self.srt_payment_card_num_input.setText(payment.card_number)
+            self.srt_payment_card_pw_input.setText(payment.card_password)
+            self.srt_payment_expire_input.setText(payment.expire)
+            self.srt_payment_corporate_check.setChecked(payment.is_corporate)
+            if payment.is_corporate:
+                self.srt_payment_business_num_input.setText(payment.validation_number)
+            else:
+                self.srt_payment_birth_input.setText(payment.validation_number)
             self.srt_save_payment_check.setChecked(True)
 
     def toggle_password_visibility(self, password_input: QLineEdit, toggle_btn: QPushButton):
@@ -1133,16 +1132,16 @@ class TrainReservationApp(QMainWindow):
             self.ktx_trains_layout.addWidget(widget)
 
         # 결제 정보 로드 (이미 저장된 정보가 있다면 다시 불러오기)
-        ktx_payment = CredentialStorage.load_ktx_payment()
-        if ktx_payment:
-            self.ktx_payment_card_num_input.setText(ktx_payment.card_number)
-            self.ktx_payment_card_pw_input.setText(ktx_payment.card_password)
-            self.ktx_payment_expire_input.setText(ktx_payment.expire)
-            self.ktx_payment_corporate_check.setChecked(ktx_payment.is_corporate)
-            if ktx_payment.is_corporate:
-                self.ktx_payment_business_num_input.setText(ktx_payment.validation_number)
+        payment = CredentialStorage.load_payment()
+        if payment:
+            self.ktx_payment_card_num_input.setText(payment.card_number)
+            self.ktx_payment_card_pw_input.setText(payment.card_password)
+            self.ktx_payment_expire_input.setText(payment.expire)
+            self.ktx_payment_corporate_check.setChecked(payment.is_corporate)
+            if payment.is_corporate:
+                self.ktx_payment_business_num_input.setText(payment.validation_number)
             else:
-                self.ktx_payment_birth_input.setText(ktx_payment.validation_number)
+                self.ktx_payment_birth_input.setText(payment.validation_number)
             self.ktx_save_payment_check.setChecked(True)
 
         self.ktx_trains_card.setVisible(True)
@@ -1162,6 +1161,29 @@ class TrainReservationApp(QMainWindow):
         if not selected_indices:
             self.add_log("✗ 열차를 선택해주세요")
             return
+
+        # 결제 정보 미리 저장 (체크박스가 체크되어 있고 정보가 유효한 경우)
+        if self.ktx_save_payment_check.isChecked() and self._validate_ktx_payment_info():
+            try:
+                card_number = self.ktx_payment_card_num_input.text()
+                card_pw = self.ktx_payment_card_pw_input.text()
+                is_corporate = self.ktx_payment_corporate_check.isChecked()
+                validation_number = (
+                    self.ktx_payment_birth_input.text()
+                    if not is_corporate
+                    else self.ktx_payment_business_num_input.text()
+                )
+                expire = self.ktx_payment_expire_input.text()
+
+                CredentialStorage.save_payment(
+                    card_number=card_number,
+                    card_password=card_pw,
+                    expire=expire,
+                    validation_number=validation_number,
+                    is_corporate=is_corporate
+                )
+            except Exception:
+                pass  # 저장 실패 시 조용히 무시
 
         self.is_ktx_running = True
         self.ktx_start_btn.setEnabled(False)
@@ -1369,16 +1391,16 @@ class TrainReservationApp(QMainWindow):
             self.srt_trains_layout.addWidget(widget)
 
         # 결제 정보 로드 (이미 저장된 정보가 있다면 다시 불러오기)
-        srt_payment = CredentialStorage.load_srt_payment()
-        if srt_payment:
-            self.srt_payment_card_num_input.setText(srt_payment.card_number)
-            self.srt_payment_card_pw_input.setText(srt_payment.card_password)
-            self.srt_payment_expire_input.setText(srt_payment.expire)
-            self.srt_payment_corporate_check.setChecked(srt_payment.is_corporate)
-            if srt_payment.is_corporate:
-                self.srt_payment_business_num_input.setText(srt_payment.validation_number)
+        payment = CredentialStorage.load_payment()
+        if payment:
+            self.srt_payment_card_num_input.setText(payment.card_number)
+            self.srt_payment_card_pw_input.setText(payment.card_password)
+            self.srt_payment_expire_input.setText(payment.expire)
+            self.srt_payment_corporate_check.setChecked(payment.is_corporate)
+            if payment.is_corporate:
+                self.srt_payment_business_num_input.setText(payment.validation_number)
             else:
-                self.srt_payment_birth_input.setText(srt_payment.validation_number)
+                self.srt_payment_birth_input.setText(payment.validation_number)
             self.srt_save_payment_check.setChecked(True)
 
         self.srt_trains_card.setVisible(True)
@@ -1398,6 +1420,29 @@ class TrainReservationApp(QMainWindow):
         if not selected_indices:
             self.add_log("✗ 열차를 선택해주세요")
             return
+
+        # 결제 정보 미리 저장 (체크박스가 체크되어 있고 정보가 유효한 경우)
+        if self.srt_save_payment_check.isChecked() and self._validate_srt_payment_info():
+            try:
+                card_number = self.srt_payment_card_num_input.text()
+                card_pw = self.srt_payment_card_pw_input.text()
+                is_corporate = self.srt_payment_corporate_check.isChecked()
+                validation_number = (
+                    self.srt_payment_birth_input.text()
+                    if not is_corporate
+                    else self.srt_payment_business_num_input.text()
+                )
+                expire = self.srt_payment_expire_input.text()
+
+                CredentialStorage.save_payment(
+                    card_number=card_number,
+                    card_password=card_pw,
+                    expire=expire,
+                    validation_number=validation_number,
+                    is_corporate=is_corporate
+                )
+            except Exception:
+                pass  # 저장 실패 시 조용히 무시
 
         self.is_srt_running = True
         self.srt_start_btn.setEnabled(False)
@@ -1560,18 +1605,6 @@ class TrainReservationApp(QMainWindow):
             )
             expire = self.srt_payment_expire_input.text()
 
-            # 결제 정보 저장 (체크박스 확인)
-            if self.srt_save_payment_check.isChecked():
-                CredentialStorage.save_srt_payment(
-                    card_number=card_number,
-                    card_password=card_pw,
-                    expire=expire,
-                    validation_number=validation_number,
-                    is_corporate=is_corporate
-                )
-            else:
-                CredentialStorage.delete_srt_payment()
-
             # 결제 API 호출
             credit_card = CreditCard(
                 number=card_number,
@@ -1672,18 +1705,6 @@ class TrainReservationApp(QMainWindow):
                 else self.ktx_payment_business_num_input.text()
             )
             expire = self.ktx_payment_expire_input.text()
-
-            # 결제 정보 저장 (체크박스 확인)
-            if self.ktx_save_payment_check.isChecked():
-                CredentialStorage.save_ktx_payment(
-                    card_number=card_number,
-                    card_password=card_pw,
-                    expire=expire,
-                    validation_number=validation_number,
-                    is_corporate=is_corporate
-                )
-            else:
-                CredentialStorage.delete_ktx_payment()
 
             # 결제 API 호출
             credit_card = CreditCard(
