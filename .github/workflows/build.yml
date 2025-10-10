@@ -59,18 +59,18 @@ jobs:
 
       - name: Build macOS app
         run: |
-          uv run pyinstaller --name KTX-SRT-Macro --onefile --windowed --icon "assets/favicon.icns" --add-data "src:src" --add-data "assets:assets" main.py
+          uv run pyinstaller --name KTX-SRT-Macro --windowed --icon "assets/favicon.icns" --add-data "src:src" --add-data "assets:assets" main.py
 
-      - name: Create macOS DMG (optional - app bundle as-is)
+      - name: Create macOS zip
         run: |
           cd dist
-          mv KTX-SRT-Macro KTX-SRT-Macro-macOS
+          zip -r KTX-SRT-Macro-macOS.zip KTX-SRT-Macro.app
 
       - name: Upload macOS artifact
         uses: actions/upload-artifact@v4
         with:
           name: KTX-SRT-Macro-macOS
-          path: dist/KTX-SRT-Macro-macOS
+          path: dist/KTX-SRT-Macro-macOS.zip
 
   create-release:
     needs: [build-windows, build-macos]
@@ -113,8 +113,8 @@ jobs:
             echo "- 자동 결제 기능" >> $GITHUB_OUTPUT
             echo "" >> $GITHUB_OUTPUT
             echo "### 📥 다운로드" >> $GITHUB_OUTPUT
-            echo "- **Windows**: \`KTX-SRT-Macro-Windows.exe\` 다운로드" >> $GITHUB_OUTPUT
-            echo "- **macOS**: \`KTX-SRT-Macro-macOS\` 다운로드 후 실행 권한 부여 필요" >> $GITHUB_OUTPUT
+            echo "- **Windows**: \`KTX-SRT-Macro-Windows.exe\` 다운로드 후 실행" >> $GITHUB_OUTPUT
+            echo "- **macOS**: \`KTX-SRT-Macro-macOS.zip\` 다운로드 후 압축 해제하여 \`KTX-SRT-Macro.app\` 실행" >> $GITHUB_OUTPUT
             echo "" >> $GITHUB_OUTPUT
             echo "### 📝 변경 사항" >> $GITHUB_OUTPUT
             git log --pretty=format:"- %s (%h)" >> $GITHUB_OUTPUT
@@ -126,9 +126,9 @@ jobs:
             echo "" >> $GITHUB_OUTPUT
             echo "### 📥 다운로드" >> $GITHUB_OUTPUT
             echo "- **Windows**: \`KTX-SRT-Macro-Windows.exe\` 다운로드 후 실행" >> $GITHUB_OUTPUT
-            echo "- **macOS**: \`KTX-SRT-Macro-macOS\` 다운로드" >> $GITHUB_OUTPUT
-            echo "  - 터미널에서 \`chmod +x KTX-SRT-Macro-macOS\` 실행" >> $GITHUB_OUTPUT
-            echo "  - 또는 시스템 환경설정 > 보안 및 개인정보 보호에서 실행 허용" >> $GITHUB_OUTPUT
+            echo "- **macOS**: \`KTX-SRT-Macro-macOS.zip\` 다운로드 후 압축 해제" >> $GITHUB_OUTPUT
+            echo "  - \`KTX-SRT-Macro.app\`을 Applications 폴더로 이동 (선택사항)" >> $GITHUB_OUTPUT
+            echo "  - 처음 실행 시 시스템 환경설정 > 보안 및 개인정보 보호에서 실행 허용 필요" >> $GITHUB_OUTPUT
             echo "" >> $GITHUB_OUTPUT
             echo "### 📝 변경 사항 (\`$PREVIOUS_TAG\` 이후)" >> $GITHUB_OUTPUT
             git log $PREVIOUS_TAG..HEAD --pretty=format:"- %s (%h)" --no-merges >> $GITHUB_OUTPUT
@@ -150,6 +150,6 @@ jobs:
           prerelease: false
           files: |
             ./artifacts/windows/KTX-SRT-Macro-Windows.exe
-            ./artifacts/macos/KTX-SRT-Macro-macOS
+            ./artifacts/macos/KTX-SRT-Macro-macOS.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
