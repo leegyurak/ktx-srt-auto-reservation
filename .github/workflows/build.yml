@@ -59,7 +59,7 @@ jobs:
 
       - name: Build macOS app
         run: |
-          uv run pyinstaller --name KTX-SRT-Macro --windowed --icon "assets/favicon.icns" --add-data "src:src" --add-data "assets:assets" --hidden-import PyQt6.QtCore --hidden-import PyQt6.QtGui --hidden-import PyQt6.QtWidgets --collect-all PyQt6 --osx-bundle-identifier com.leegyurak.ktx-srt-macro main.py
+          uv run pyinstaller --name KTX-SRT-Macro --windowed --icon "assets/favicon.icns" --add-data "src:src" --add-data "assets:assets" --osx-bundle-identifier com.leegyurak.ktx-srt-macro main.py
 
       - name: Create macOS zip
         run: |
