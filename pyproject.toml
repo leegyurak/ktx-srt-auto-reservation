@@ -25,6 +25,7 @@ dependencies = [
     "curl-cffi>=0.13.0",
     "pycryptodome>=3.18.0",
     "pyqt6>=6.9.1",
+    "keyring>=25.5.0",
 ]
 
 [project.optional-dependencies]
