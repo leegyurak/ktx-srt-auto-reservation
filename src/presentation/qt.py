@@ -1132,6 +1132,19 @@ class TrainReservationApp(QMainWindow):
             self.ktx_train_widgets.append(widget)
             self.ktx_trains_layout.addWidget(widget)
 
+        # 결제 정보 로드 (이미 저장된 정보가 있다면 다시 불러오기)
+        ktx_payment = CredentialStorage.load_ktx_payment()
+        if ktx_payment:
+            self.ktx_payment_card_num_input.setText(ktx_payment.card_number)
+            self.ktx_payment_card_pw_input.setText(ktx_payment.card_password)
+            self.ktx_payment_expire_input.setText(ktx_payment.expire)
+            self.ktx_payment_corporate_check.setChecked(ktx_payment.is_corporate)
+            if ktx_payment.is_corporate:
+                self.ktx_payment_business_num_input.setText(ktx_payment.validation_number)
+            else:
+                self.ktx_payment_birth_input.setText(ktx_payment.validation_number)
+            self.ktx_save_payment_check.setChecked(True)
+
         self.ktx_trains_card.setVisible(True)
         self.ktx_payment_card.setVisible(True)
         self.ktx_action_widget.setVisible(True)
@@ -1354,6 +1367,19 @@ class TrainReservationApp(QMainWindow):
             widget.checkbox.stateChanged.connect(self.update_srt_start_button)
             self.srt_train_widgets.append(widget)
             self.srt_trains_layout.addWidget(widget)
+
+        # 결제 정보 로드 (이미 저장된 정보가 있다면 다시 불러오기)
+        srt_payment = CredentialStorage.load_srt_payment()
+        if srt_payment:
+            self.srt_payment_card_num_input.setText(srt_payment.card_number)
+            self.srt_payment_card_pw_input.setText(srt_payment.card_password)
+            self.srt_payment_expire_input.setText(srt_payment.expire)
+            self.srt_payment_corporate_check.setChecked(srt_payment.is_corporate)
+            if srt_payment.is_corporate:
+                self.srt_payment_business_num_input.setText(srt_payment.validation_number)
+            else:
+                self.srt_payment_birth_input.setText(srt_payment.validation_number)
+            self.srt_save_payment_check.setChecked(True)
 
         self.srt_trains_card.setVisible(True)
         self.srt_payment_card.setVisible(True)
