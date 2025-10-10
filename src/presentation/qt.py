@@ -1165,17 +1165,15 @@ class TrainReservationApp(QMainWindow):
                             return  # 다른 열차는 시도하지 않고 종료
                     else:
                         self.add_log(f"  ✗ {train.train_number} 예약 실패: {reservation.message}")
-                        if not idx == len(selected_trains) - 1:  # 마지막 열차가 아니라면 랜덤 딜레이 후 재시도
-                            delay = random.uniform(RETRY_DELAY_MIN, RETRY_DELAY_MAX)
-                            time.sleep(delay)
+                        delay = random.uniform(RETRY_DELAY_MIN, RETRY_DELAY_MAX)
+                        if idx == len(selected_trains) - 1:
+                            self.add_log(f"⏳ {delay:.1f}초 후 재시도...")
+                        else:
+                            self.add_log(f"⏳ {delay:.1f}초 후 다음 열차 시도...")
+                        time.sleep(delay)
 
                 except Exception as e:
                     self.add_log(f"  ✗ 오류: {str(e)}")
-
-            if self.is_ktx_running:
-                delay = random.uniform(RETRY_DELAY_MIN, RETRY_DELAY_MAX)
-                self.add_log(f"⏳ {delay:.1f}초 후 재시도...")
-                time.sleep(delay)
 
     def stop_ktx(self):
         """KTX 예약 중지"""
@@ -1381,17 +1379,15 @@ class TrainReservationApp(QMainWindow):
                             return  # 다른 열차는 시도하지 않고 종료
                     else:
                         self.add_log(f"  ✗ {train.train_number} 예약 실패: {reservation.message}")
-                        if not idx == len(selected_trains) - 1:  # 마지막 열차가 아니라면 랜덤 딜레이 후 재시도
-                            delay = random.uniform(RETRY_DELAY_MIN, RETRY_DELAY_MAX)
-                            time.sleep(delay)
+                        delay = random.uniform(RETRY_DELAY_MIN, RETRY_DELAY_MAX)
+                        if idx == len(selected_trains) - 1:
+                            self.add_log(f"⏳ {delay:.1f}초 후 재시도...")
+                        else:
+                            self.add_log(f"⏳ {delay:.1f}초 후 다음 열차 시도...")
+                        time.sleep(delay)
 
                 except Exception as e:
                     self.add_log(f"  ✗ 오류: {str(e)}")
-
-            if self.is_srt_running:
-                delay = random.uniform(RETRY_DELAY_MIN, RETRY_DELAY_MAX)
-                self.add_log(f"⏳ {delay:.1f}초 후 재시도...")
-                time.sleep(delay)
 
     def _play_single_alert_sound(self):
         """OS에 따라 알림음 1회 재생"""
