@@ -1165,6 +1165,8 @@ class TrainReservationApp(QMainWindow):
                             return  # 다른 열차는 시도하지 않고 종료
                     else:
                         self.add_log(f"  ✗ {train.train_number} 예약 실패: {reservation.message}")
+                        delay = random.uniform(RETRY_DELAY_MIN, RETRY_DELAY_MAX)
+                        time.sleep(delay)
 
                 except Exception as e:
                     self.add_log(f"  ✗ 오류: {str(e)}")
@@ -1378,6 +1380,8 @@ class TrainReservationApp(QMainWindow):
                             return  # 다른 열차는 시도하지 않고 종료
                     else:
                         self.add_log(f"  ✗ {train.train_number} 예약 실패: {reservation.message}")
+                        delay = random.uniform(RETRY_DELAY_MIN, RETRY_DELAY_MAX)
+                        time.sleep(delay)
 
                 except Exception as e:
                     self.add_log(f"  ✗ 오류: {str(e)}")
