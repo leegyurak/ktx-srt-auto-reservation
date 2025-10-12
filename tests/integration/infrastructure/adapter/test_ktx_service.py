@@ -158,21 +158,21 @@ class TestKTXServiceReserveTrain:
     """Tests for KTXService reserve_train"""
 
     @patch('src.infrastructure.adapters.ktx_service.Korail')
-    def test_reserve_train_not_logged_in(self, mock_korail_class, ktx_service, sample_reservation_request):
+    def test_reserve_train_not_logged_in(self, mock_korail_class, ktx_service, sample_reservation_request, sample_train_schedule):
         """Test reserving train when not logged in"""
         # Arrange
         ktx_service._logged_in = False
-        mock_schedule = Mock()
+        mock_schedules = [sample_train_schedule]
 
         # Act
-        result = ktx_service.reserve_train(mock_schedule, sample_reservation_request)
+        result = ktx_service.reserve_train(mock_schedules, sample_reservation_request)
 
         # Assert
         assert result.success is False
         assert result.message == "Not logged in"
 
     @patch('src.infrastructure.adapters.ktx_service.Korail')
-    def test_reserve_train_not_found(self, mock_korail_class, ktx_service, sample_reservation_request):
+    def test_reserve_train_not_found(self, mock_korail_class, ktx_service, sample_reservation_request, sample_train_schedule):
         """Test reserving train when train not found"""
         # Arrange
         ktx_service._logged_in = True
@@ -180,15 +180,146 @@ class TestKTXServiceReserveTrain:
         mock_korail.search_train.return_value = []
         ktx_service._korail = mock_korail
 
-        mock_schedule = Mock()
-        mock_schedule.train_number = "999"
+        mock_schedules = [sample_train_schedule]
 
         # Act
-        result = ktx_service.reserve_train(mock_schedule, sample_reservation_request)
+        result = ktx_service.reserve_train(mock_schedules, sample_reservation_request)
 
         # Assert
         assert result.success is False
-        assert result.message == "Train not found"
+        assert result.message == "Any requested trains have no seats"
+
+    @patch('src.infrastructure.adapters.ktx_service.Korail')
+    def test_reserve_train_success_first_train(self, mock_korail_class, ktx_service, sample_reservation_request, sample_train_schedule):
+        """Test successful reservation with first train"""
+        # Arrange
+        ktx_service._logged_in = True
+        mock_korail = Mock()
+
+        mock_train = Mock()
+        mock_train.train_no = "001"
+        mock_train.has_seat.return_value = True
+
+        mock_reservation = Mock()
+        mock_reservation.rsv_id = "R123456"
+
+        mock_korail.search_train.return_value = [mock_train]
+        mock_korail.reserve.return_value = mock_reservation
+        ktx_service._korail = mock_korail
+
+        mock_schedules = [sample_train_schedule]
+
+        # Act
+        result = ktx_service.reserve_train(mock_schedules, sample_reservation_request)
+
+        # Assert
+        assert result.success is True
+        assert result.reservation_number == "R123456"
+        assert result.train_schedule == sample_train_schedule
+
+    @patch('src.infrastructure.adapters.ktx_service.Korail')
+    def test_reserve_train_success_second_train(self, mock_korail_class, ktx_service, sample_reservation_request):
+        """Test successful reservation with second train when first has no seats"""
+        # Arrange
+        from src.domain.models.entities import TrainSchedule
+
+        ktx_service._logged_in = True
+        mock_korail = Mock()
+
+        # Create two schedules
+        schedule1 = TrainSchedule(
+            train_number="001",
+            departure_station="서울",
+            arrival_station="부산",
+            departure_time=datetime(2025, 1, 15, 10, 0, 0),
+            arrival_time=datetime(2025, 1, 15, 12, 30, 0),
+            train_type=TrainType.KTX,
+            available_seats=0,
+            price="59800"
+        )
+        schedule2 = TrainSchedule(
+            train_number="002",
+            departure_station="서울",
+            arrival_station="부산",
+            departure_time=datetime(2025, 1, 15, 11, 0, 0),
+            arrival_time=datetime(2025, 1, 15, 13, 30, 0),
+            train_type=TrainType.KTX,
+            available_seats=10,
+            price="59800"
+        )
+
+        # Mock trains
+        mock_train1 = Mock()
+        mock_train1.train_no = "001"
+        mock_train1.has_seat.return_value = False
+
+        mock_train2 = Mock()
+        mock_train2.train_no = "002"
+        mock_train2.has_seat.return_value = True
+
+        mock_reservation = Mock()
+        mock_reservation.rsv_id = "R123456"
+
+        mock_korail.search_train.return_value = [mock_train1, mock_train2]
+        mock_korail.reserve.return_value = mock_reservation
+        ktx_service._korail = mock_korail
+
+        mock_schedules = [schedule1, schedule2]
+
+        # Act
+        result = ktx_service.reserve_train(mock_schedules, sample_reservation_request)
+
+        # Assert
+        assert result.success is True
+        assert result.reservation_number == "R123456"
+        assert result.train_schedule.train_number == "002"
+
+    @patch('src.infrastructure.adapters.ktx_service.Korail')
+    def test_reserve_train_multiple_schedules(self, mock_korail_class, ktx_service, sample_reservation_request):
+        """Test reservation with multiple schedules"""
+        # Arrange
+        from src.domain.models.entities import TrainSchedule
+
+        ktx_service._logged_in = True
+        mock_korail = Mock()
+
+        # Create three schedules
+        schedules = [
+            TrainSchedule(
+                train_number=f"00{i}",
+                departure_station="서울",
+                arrival_station="부산",
+                departure_time=datetime(2025, 1, 15, 10 + i, 0, 0),
+                arrival_time=datetime(2025, 1, 15, 12 + i, 30, 0),
+                train_type=TrainType.KTX,
+                available_seats=10,
+                price="59800"
+            )
+            for i in range(1, 4)
+        ]
+
+        # Mock trains - only third one has seats
+        mock_trains = []
+        for i in range(1, 4):
+            mock_train = Mock()
+            mock_train.train_no = f"00{i}"
+            mock_train.has_seat.return_value = (i == 3)
+            mock_trains.append(mock_train)
+
+        mock_reservation = Mock()
+        mock_reservation.rsv_id = "R123456"
+
+        mock_korail.search_train.return_value = mock_trains
+        mock_korail.reserve.return_value = mock_reservation
+        ktx_service._korail = mock_korail
+
+        # Act
+        result = ktx_service.reserve_train(schedules, sample_reservation_request)
+
+        # Assert
+        assert result.success is True
+        assert result.reservation_number == "R123456"
+        assert result.train_schedule.train_number == "003"
 
 
 class TestKTXServicePayment:

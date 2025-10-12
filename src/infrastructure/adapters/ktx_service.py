@@ -70,7 +70,7 @@ class KTXService(TrainService):
         except Exception:
             return []
 
-    def reserve_train(self, schedule: TrainSchedule, request: ReservationRequest) -> ReservationResult:
+    def reserve_train(self, schedules: list[TrainSchedule], request: ReservationRequest) -> ReservationResult:
         """Reserve a KTX train"""
         if not self._logged_in:
             return ReservationResult(success=False, message="Not logged in")
@@ -90,30 +90,27 @@ class KTXService(TrainService):
                 include_no_seats=True,
             )
 
-            target_train = None
+            schedules.sort(key=lambda x: x.departure_time)
+            target_train_numbers = [schedule.train_number for schedule in schedules]
+
             for train in trains:
-                if train.train_no == schedule.train_number:
-                    target_train = train
-                    break
+                if train.train_no in target_train_numbers and train.has_seat():
+                    reservation = self._korail.reserve(train=train, passengers=passengers)
+                    if reservation:
+                        return ReservationResult(
+                            success=True,
+                            reservation_number=reservation.rsv_id,
+                            message="Reservation successful",
+                            train_schedule=[
+                                schedule
+                                for schedule in schedules
+                                if train.train_no == schedule.train_number
+                            ][0],
+                        )
+                    else:
+                        continue
 
-            if not target_train:
-                return ReservationResult(success=False, message="Train not found")
-
-            if not target_train.has_seat():
-                return ReservationResult(success=False, message="No available seats")
-
-            # Make reservation
-            reservation = self._korail.reserve(train=target_train, passengers=passengers)
-
-            if reservation:
-                return ReservationResult(
-                    success=True,
-                    reservation_number=reservation.rsv_id,
-                    message="Reservation successful",
-                    train_schedule=schedule
-                )
-            else:
-                return ReservationResult(success=False, message="Reservation failed")
+            return ReservationResult(success=False, message="Any requested trains have no seats")
 
         except Exception as e:
             return ReservationResult(success=False, message=f"Reservation error: {e}")

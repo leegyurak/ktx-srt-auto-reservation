@@ -72,7 +72,7 @@ class SRTService(TrainService):
         except Exception:
             return []
 
-    def reserve_train(self, schedule: TrainSchedule, request: ReservationRequest) -> ReservationResult:
+    def reserve_train(self, schedules: list[TrainSchedule], request: ReservationRequest) -> ReservationResult:
         """Reserve an SRT train"""
         if not self._logged_in:
             return ReservationResult(success=False, message="Not logged in")
@@ -81,7 +81,7 @@ class SRTService(TrainService):
             # Convert passengers to SRT format
             passengers = [PassengerMapper.to_srt(p) for p in request.passengers]
 
-            # Find the train again for reservation
+            # Find the trains for reservation
             trains = self._srt.search_train(
                 dep=request.departure_station,
                 arr=request.arrival_station,
@@ -91,38 +91,35 @@ class SRTService(TrainService):
                 available_only=False,
             )
 
-            target_train = None
+            schedules.sort(key=lambda x: x.departure_time)
+            target_train_numbers = [schedule.train_number for schedule in schedules]
+
             for train in trains:
-                if train.train_number == schedule.train_number:
-                    target_train = train
-                    break
+                if train.train_number in target_train_numbers and train.seat_available():
+                    reservation = self._srt.reserve(train=train, passengers=passengers)
+                    if reservation:
+                        return ReservationResult(
+                            success=True,
+                            reservation_number=reservation.reservation_number,
+                            message="Reservation successful",
+                            train_schedule=[
+                                schedule
+                                for schedule in schedules
+                                if train.train_number == schedule.train_number
+                            ][0],
+                        )
+                    else:
+                        continue
 
-            if not target_train:
-                return ReservationResult(success=False, message="Train not found")
-
-            if not target_train.seat_available():
-                return ReservationResult(success=False, message="No available seats")
-
-            # Make reservation
-            reservation = self._srt.reserve(train=target_train, passengers=passengers)
-
-            if reservation:
-                return ReservationResult(
-                    success=True,
-                    reservation_number=reservation.reservation_number,
-                    message="Reservation successful",
-                    train_schedule=schedule
-                )
-            else:
-                return ReservationResult(success=False, message="Reservation failed")
+            return ReservationResult(success=False, message="Any requested trains have no seats")
 
         except Exception as e:
             return ReservationResult(success=False, message=f"Reservation error: {e}")
 
-    def payment_reservation(self, reservation: ReservationResult, credit_card: CreditCard) -> bool:
+    def payment_reservation(self, reservation: ReservationResult, credit_card: CreditCard) -> PaymentResult:
         """Pay for a reservation with credit card"""
         if not self._logged_in:
-            return False
+            return PaymentResult(success=False, message="Not logged in")
 
         srt_reservations = self._srt.get_reservations(paid_only=False)
         target_reservation = None

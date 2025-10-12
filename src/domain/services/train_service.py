@@ -25,7 +25,7 @@ class TrainService(ABC):
         pass
 
     @abstractmethod
-    def reserve_train(self, schedule: TrainSchedule, request: ReservationRequest) -> ReservationResult:
+    def reserve_train(self, schedule: list[TrainSchedule], request: ReservationRequest) -> ReservationResult:
         """Reserve a specific train"""
         pass
 
