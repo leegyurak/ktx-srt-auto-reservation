@@ -39,6 +39,11 @@ class TrainService(ABC):
         """Check if user is logged in"""
         pass
 
+    @abstractmethod
+    def clear(self) -> None:
+        """Clear client sessions"""
+        pass
+
     @property
     @abstractmethod
     def service_name(self) -> str:

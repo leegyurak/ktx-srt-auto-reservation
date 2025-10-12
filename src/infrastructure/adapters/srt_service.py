@@ -173,3 +173,8 @@ class SRTService(TrainService):
             return getattr(train, 'seat_count', 0)
         except:
             return 0
+        
+    def clear(self) -> None:
+        self.logout()
+        self._srt.clear()
+        self._srt = SRT(auto_login=False)

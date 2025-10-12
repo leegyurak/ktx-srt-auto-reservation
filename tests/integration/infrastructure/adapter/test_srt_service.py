@@ -254,3 +254,45 @@ class TestSRTServicePayment:
         # Assert
         assert result.success is False
         assert result.message == "Reservation not found"
+
+
+class TestSRTServiceClear:
+    """Tests for SRTService clear method"""
+
+    @patch('src.infrastructure.adapters.srt_service.SRT')
+    def test_clear_session(self, mock_srt_class, srt_service):
+        """Test clearing session"""
+        # Arrange
+        mock_srt = Mock()
+        mock_srt.clear = Mock()
+        srt_service._srt = mock_srt
+        srt_service._logged_in = True
+
+        # Act
+        srt_service.clear()
+
+        # Assert
+        assert srt_service.is_logged_in() is False
+        mock_srt.logout.assert_called_once()
+        mock_srt.clear.assert_called_once()
+        assert srt_service._srt is not None
+        assert srt_service._srt != mock_srt  # New SRT instance created
+
+    @patch('src.infrastructure.adapters.srt_service.SRT')
+    def test_clear_creates_new_instance(self, mock_srt_class, srt_service):
+        """Test that clear creates a new SRT instance"""
+        # Arrange
+        old_srt = srt_service._srt
+        old_srt.clear = Mock()
+        srt_service._logged_in = True
+
+        # Mock the SRT class to return a new instance
+        new_mock_srt = Mock()
+        mock_srt_class.return_value = new_mock_srt
+
+        # Act
+        srt_service.clear()
+
+        # Assert
+        mock_srt_class.assert_called_once_with(auto_login=False)
+        assert srt_service._srt == new_mock_srt

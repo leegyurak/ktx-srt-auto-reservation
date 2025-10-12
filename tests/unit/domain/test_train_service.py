@@ -29,6 +29,7 @@ class TestTrainServiceInterface:
             'reserve_train',
             'get_stations',
             'is_logged_in',
+            'clear',
         ]
 
         for method_name in required_methods:
@@ -67,6 +68,9 @@ class TestTrainServiceImplementation:
 
             def is_logged_in(self) -> bool:
                 return True
+
+            def clear(self) -> None:
+                pass
 
             @property
             def service_name(self) -> str:
@@ -129,6 +133,9 @@ class TestTrainServiceImplementation:
 
             def is_logged_in(self) -> bool:
                 return self._logged_in
+
+            def clear(self) -> None:
+                self._logged_in = False
 
             @property
             def service_name(self) -> str:

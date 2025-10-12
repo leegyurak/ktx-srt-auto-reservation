@@ -1219,6 +1219,27 @@ class TrainReservationApp(QMainWindow):
             attempt += 1
             self.add_log(f"🔄 예약 시도 #{attempt}")
 
+            # 500번마다 세션 초기화
+            if attempt % 500 == 0:
+                self.add_log("🔄 세션 초기화 중...")
+                try:
+                    username = self.ktx_id_input.text()
+                    password = self.ktx_pw_input.text()
+                    self.ktx_service.clear()
+                    self.add_log("✓ 세션 초기화 완료")
+                    self.add_log("🔐 재로그인 중...")
+                    login_result = self.ktx_service.login(username, password)
+                    if login_result:
+                        self.add_log("✓ 재로그인 성공")
+                    else:
+                        self.add_log("✗ 재로그인 실패")
+                        self.is_ktx_running = False
+                        return
+                except Exception as e:
+                    self.add_log(f"✗ 세션 초기화 중 오류: {str(e)}")
+                    self.is_ktx_running = False
+                    return
+
             for idx, train in enumerate(selected_trains):
                 if not self.is_ktx_running:
                     break
@@ -1477,6 +1498,27 @@ class TrainReservationApp(QMainWindow):
         while self.is_srt_running:
             attempt += 1
             self.add_log(f"🔄 예약 시도 #{attempt}")
+
+            # 500번마다 세션 초기화
+            if attempt % 500 == 0:
+                self.add_log("🔄 세션 초기화 중...")
+                try:
+                    username = self.srt_id_input.text()
+                    password = self.srt_pw_input.text()
+                    self.srt_service.clear()
+                    self.add_log("✓ 세션 초기화 완료")
+                    self.add_log("🔐 재로그인 중...")
+                    login_result = self.srt_service.login(username, password)
+                    if login_result:
+                        self.add_log("✓ 재로그인 성공")
+                    else:
+                        self.add_log("✗ 재로그인 실패")
+                        self.is_srt_running = False
+                        return
+                except Exception as e:
+                    self.add_log(f"✗ 세션 초기화 중 오류: {str(e)}")
+                    self.is_srt_running = False
+                    return
 
             for idx, train in enumerate(selected_trains):
                 if not self.is_srt_running:

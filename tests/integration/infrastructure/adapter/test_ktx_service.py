@@ -247,3 +247,42 @@ class TestKTXServicePayment:
         # Assert
         assert result.success is False
         assert result.message == "Reservation not found"
+
+
+class TestKTXServiceClear:
+    """Tests for KTXService clear method"""
+
+    @patch('src.infrastructure.adapters.ktx_service.Korail')
+    def test_clear_session(self, mock_korail_class, ktx_service):
+        """Test clearing session"""
+        # Arrange
+        mock_korail = Mock()
+        ktx_service._korail = mock_korail
+        ktx_service._logged_in = True
+
+        # Act
+        ktx_service.clear()
+
+        # Assert
+        assert ktx_service.is_logged_in() is False
+        mock_korail.logout.assert_called_once()
+        assert ktx_service._korail is not None
+        assert ktx_service._korail != mock_korail  # New Korail instance created
+
+    @patch('src.infrastructure.adapters.ktx_service.Korail')
+    def test_clear_creates_new_instance(self, mock_korail_class, ktx_service):
+        """Test that clear creates a new Korail instance"""
+        # Arrange
+        old_korail = ktx_service._korail
+        ktx_service._logged_in = True
+
+        # Mock the Korail class to return a new instance
+        new_mock_korail = Mock()
+        mock_korail_class.return_value = new_mock_korail
+
+        # Act
+        ktx_service.clear()
+
+        # Assert
+        mock_korail_class.assert_called_once_with(auto_login=False)
+        assert ktx_service._korail == new_mock_korail

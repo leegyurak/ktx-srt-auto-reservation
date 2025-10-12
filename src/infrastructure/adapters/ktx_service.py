@@ -177,3 +177,7 @@ class KTXService(TrainService):
             return PaymentResult(success=True, message="Payment successful", reservation_number=target_reservation.rsv_id)
         else:
             return PaymentResult(success=False, message="Payment failed")
+        
+    def clear(self) -> None:
+        self.logout()
+        self._korail = Korail(auto_login=False)
