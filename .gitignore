@@ -37,7 +37,6 @@ uv.lock
 # PyInstaller
 build/
 dist/
-*.spec
 
 # IDE
 .vscode/
