@@ -43,6 +43,7 @@ class ReservationRequest:
     departure_time: Optional[str] = None
     passengers: List[Passenger] = None
     train_type: Optional[TrainType] = None
+    is_special_seat_allowed: bool = False
 
     def __post_init__(self):
         if self.passengers is None:

@@ -631,6 +631,10 @@ class TrainReservationApp(QMainWindow):
 
         search_card.add_layout(passenger_layout)
 
+        # 특실 옵션
+        self.ktx_special_seat_check = QCheckBox("특실 우선 예약")
+        search_card.add_widget(self.ktx_special_seat_check)
+
         self.ktx_search_btn = QPushButton("🔍 열차 검색")
         self.ktx_search_btn.setObjectName("searchButton")
         self.ktx_search_btn.clicked.connect(self.search_ktx)
@@ -831,6 +835,10 @@ class TrainReservationApp(QMainWindow):
         passenger_layout.addLayout(senior_layout)
 
         search_card.add_layout(passenger_layout)
+
+        # 특실 옵션
+        self.srt_special_seat_check = QCheckBox("특실 우선 예약")
+        search_card.add_widget(self.srt_special_seat_check)
 
         self.srt_search_btn = QPushButton("🔍 열차 검색")
         self.srt_search_btn.setObjectName("searchButton")
@@ -1232,7 +1240,8 @@ class TrainReservationApp(QMainWindow):
                         departure_date=train.departure_time.date(),
                         departure_time=train.departure_time.strftime("%H%M%S"),
                         passengers=passengers,
-                        train_type=TrainType.KTX
+                        train_type=TrainType.KTX,
+                        is_special_seat_allowed=self.ktx_special_seat_check.isChecked()
                     )
                     reservation = self.ktx_service.reserve_train(train, request)
                     if reservation.success:
@@ -1490,7 +1499,8 @@ class TrainReservationApp(QMainWindow):
                         departure_date=train.departure_time.date(),
                         departure_time=train.departure_time.strftime("%H%M%S"),
                         passengers=passengers,
-                        train_type=TrainType.SRT
+                        train_type=TrainType.SRT,
+                        is_special_seat_allowed=self.srt_special_seat_check.isChecked()
                     )
                     reservation = self.srt_service.reserve_train(train, request)
                     if reservation.success:

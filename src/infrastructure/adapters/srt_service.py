@@ -8,6 +8,7 @@ from src.domain.models.enums import TrainType
 from src.infrastructure.external.srt import SRT
 from src.infrastructure.mappers import PassengerMapper
 from src.constants.stations import SRT_STATIONS
+from src.infrastructure.external.srt import SeatType
 
 
 class SRTService(TrainService):
@@ -104,7 +105,10 @@ class SRTService(TrainService):
                 return ReservationResult(success=False, message="No available seats")
 
             # Make reservation
-            reservation = self._srt.reserve(train=target_train, passengers=passengers)
+            if target_train.special_seat_available() and request.is_special_seat_allowed:
+                reservation = self._srt.reserve(train=target_train, passengers=passengers, option=SeatType.SPECIAL_ONLY)
+            else:
+                reservation = self._srt.reserve(train=target_train, passengers=passengers, option=SeatType.GENERAL_ONLY)
 
             if reservation:
                 return ReservationResult(

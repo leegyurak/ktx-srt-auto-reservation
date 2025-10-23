@@ -8,7 +8,7 @@ from src.domain.models.enums import TrainType
 from src.infrastructure.external.ktx import Korail, TrainType as KorailTrainType
 from src.infrastructure.mappers import PassengerMapper
 from src.constants.stations import KTX_STATIONS
-
+from src.infrastructure.external.ktx import ReserveOption
 
 class KTXService(TrainService):
     """KTX/Korail train service implementation"""
@@ -103,7 +103,10 @@ class KTXService(TrainService):
                 return ReservationResult(success=False, message="No available seats")
 
             # Make reservation
-            reservation = self._korail.reserve(train=target_train, passengers=passengers)
+            if target_train.has_special_seat() and request.is_special_seat_allowed:
+                reservation = self._korail.reserve(train=target_train, passengers=passengers, option=ReserveOption.SPECIAL_ONLY)
+            else:
+                reservation = self._korail.reserve(train=target_train, passengers=passengers, option=ReserveOption.GENERAL_ONLY)
 
             if reservation:
                 return ReservationResult(
