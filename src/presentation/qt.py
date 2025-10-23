@@ -1227,74 +1227,91 @@ class TrainReservationApp(QMainWindow):
             attempt += 1
             self.add_log(f"🔄 예약 시도 #{attempt}")
 
-            for idx, train in enumerate(selected_trains):
-                if not self.is_ktx_running:
-                    break
-
+            # 500번마다 세션 초기화
+            if attempt % 500 == 0:
+                self.add_log("🔄 세션 초기화 중...")
                 try:
-                    self.add_log(f"  → {train.train_number} 예약 시도 중...")
-
-                    request = ReservationRequest(
-                        departure_station=train.departure_station,
-                        arrival_station=train.arrival_station,
-                        departure_date=train.departure_time.date(),
-                        departure_time=train.departure_time.strftime("%H%M%S"),
-                        passengers=passengers,
-                        train_type=TrainType.KTX,
-                        is_special_seat_allowed=self.ktx_special_seat_check.isChecked()
-                    )
-                    reservation = self.ktx_service.reserve_train(train, request)
-                    if reservation.success:
-                        self.add_log(f"  ✓ {train.train_number} 예약 성공!")
-                        self.add_log(f"  예약번호: {reservation.reservation_number}")
-
-                        # 결제 정보 검증
-                        if not self._validate_ktx_payment_info():
-                            self.add_log("  ✗ 예약은 완료되었으나 결제 정보가 입력되지 않았습니다.")
-                            self.add_log(f"    예약번호: {reservation.reservation_number}")
-                            self.add_log("    알림음 중지 버튼을 눌러 알림음을 중지하고")
-                            self.add_log("    앱에 들어가 10분 내에 결제해주세요.")
-                            self.is_ktx_running = False  # 예약 루프 중지
-                            # 반복 알림음 재생 시작
-                            self.alert_thread = threading.Thread(target=self._play_alert_sound_loop, daemon=True)
-                            self.alert_thread.start()
-                            # 시그널로 알림음 중지 버튼 표시
-                            self.log_signals.show_ktx_alert_button.emit()
-                            return  # 다른 열차는 시도하지 않고 종료
-
-                        # 결제 진행
-                        payment = self._process_ktx_payment(reservation)
-
-                        if payment.success:
-                            self.add_log(f"  ✓ 결제 완료!")
-                            self.is_ktx_running = False
-                            # 버튼 상태 업데이트
-                            QTimer.singleShot(0, lambda: self.ktx_start_btn.setEnabled(True))
-                            QTimer.singleShot(0, lambda: self.ktx_stop_btn.setEnabled(False))
-                            return  # 예약 루프 종료
-                        else:
-                            self.add_log("  ✗ 예약은 완료되었으나 결제에 실패했습니다.")
-                            self.add_log(f"    예약번호: {payment.reservation_number}")
-                            self.add_log("    알림음 중지 버튼을 눌러 알림음을 중지하고")
-                            self.add_log("    앱에 들어가 10분 내에 결제해주세요.")
-                            self.is_ktx_running = False  # 예약 루프 중지
-                            # 반복 알림음 재생 시작
-                            self.alert_thread = threading.Thread(target=self._play_alert_sound_loop, daemon=True)
-                            self.alert_thread.start()
-                            # 시그널로 알림음 중지 버튼 표시
-                            self.log_signals.show_ktx_alert_button.emit()
-                            return  # 다른 열차는 시도하지 않고 종료
+                    username = self.ktx_id_input.text()
+                    password = self.ktx_pw_input.text()
+                    self.ktx_service.clear()
+                    self.add_log("✓ 세션 초기화 완료")
+                    self.add_log("🔐 재로그인 중...")
+                    login_result = self.ktx_service.login(username, password)
+                    if login_result:
+                        self.add_log("✓ 재로그인 성공")
                     else:
-                        self.add_log(f"  ✗ {train.train_number} 예약 실패: {reservation.message}")
-                        delay = random.uniform(RETRY_DELAY_MIN, RETRY_DELAY_MAX)
-                        if idx == len(selected_trains) - 1:
-                            self.add_log(f"⏳ {delay:.1f}초 후 재시도...")
-                        else:
-                            self.add_log(f"⏳ {delay:.1f}초 후 다음 열차 시도...")
-                        time.sleep(delay)
-
+                        self.add_log("✗ 재로그인 실패")
+                        self.is_ktx_running = False
+                        return
                 except Exception as e:
-                    self.add_log(f"  ✗ 오류: {str(e)}")
+                    self.add_log(f"✗ 세션 초기화 중 오류: {str(e)}")
+                    self.is_ktx_running = False
+                    return
+
+            try:
+                # 선택한 모든 열차를 한 번에 시도
+                train_numbers = ", ".join([t.train_number for t in selected_trains])
+                self.add_log(f"  → 열차 예약 시도 중: {train_numbers}")
+
+                request = ReservationRequest(
+                    departure_station=selected_trains[0].departure_station,
+                    arrival_station=selected_trains[0].arrival_station,
+                    departure_date=selected_trains[0].departure_time.date(),
+                    departure_time=selected_trains[0].departure_time.strftime("%H%M%S"),
+                    passengers=passengers,
+                    train_type=TrainType.KTX
+                )
+                reservation = self.ktx_service.reserve_train(selected_trains, request)
+                if reservation.success:
+                    self.add_log(f"  ✓ 예약 성공! (열차: {reservation.train_schedule.train_number})")
+                    self.add_log(f"  예약번호: {reservation.reservation_number}")
+
+                    # 결제 정보 검증
+                    if not self._validate_ktx_payment_info():
+                        self.add_log("  ✗ 예약은 완료되었으나 결제 정보가 입력되지 않았습니다.")
+                        self.add_log(f"    예약번호: {reservation.reservation_number}")
+                        self.add_log("    알림음 중지 버튼을 눌러 알림음을 중지하고")
+                        self.add_log("    앱에 들어가 10분 내에 결제해주세요.")
+                        self.is_ktx_running = False  # 예약 루프 중지
+                        # 반복 알림음 재생 시작
+                        self.alert_thread = threading.Thread(target=self._play_alert_sound_loop, daemon=True)
+                        self.alert_thread.start()
+                        # 시그널로 알림음 중지 버튼 표시
+                        self.log_signals.show_ktx_alert_button.emit()
+                        return  # 예약 루프 종료
+
+                    # 결제 진행
+                    payment = self._process_ktx_payment(reservation)
+
+                    if payment.success:
+                        self.add_log(f"  ✓ 결제 완료!")
+                        self.is_ktx_running = False
+                        # 버튼 상태 업데이트
+                        QTimer.singleShot(0, lambda: self.ktx_start_btn.setEnabled(True))
+                        QTimer.singleShot(0, lambda: self.ktx_stop_btn.setEnabled(False))
+                        return  # 예약 루프 종료
+                    else:
+                        self.add_log("  ✗ 예약은 완료되었으나 결제에 실패했습니다.")
+                        self.add_log(f"    예약번호: {payment.reservation_number}")
+                        self.add_log("    알림음 중지 버튼을 눌러 알림음을 중지하고")
+                        self.add_log("    앱에 들어가 10분 내에 결제해주세요.")
+                        self.is_ktx_running = False  # 예약 루프 중지
+                        # 반복 알림음 재생 시작
+                        self.alert_thread = threading.Thread(target=self._play_alert_sound_loop, daemon=True)
+                        self.alert_thread.start()
+                        # 시그널로 알림음 중지 버튼 표시
+                        self.log_signals.show_ktx_alert_button.emit()
+                        return  # 예약 루프 종료
+                else:
+                    self.add_log(f"  ✗ 예약 실패: {reservation.message}")
+                    delay = random.uniform(RETRY_DELAY_MIN, RETRY_DELAY_MAX)
+                    self.add_log(f"⏳ {delay:.1f}초 후 재시도...")
+                    time.sleep(delay)
+
+            except Exception as e:
+                self.add_log(f"  ✗ 오류: {str(e)}")
+                delay = random.uniform(RETRY_DELAY_MIN, RETRY_DELAY_MAX)
+                time.sleep(delay)
 
     def stop_ktx(self):
         """KTX 예약 중지"""
@@ -1487,73 +1504,91 @@ class TrainReservationApp(QMainWindow):
             attempt += 1
             self.add_log(f"🔄 예약 시도 #{attempt}")
 
-            for idx, train in enumerate(selected_trains):
-                if not self.is_srt_running:
-                    break
-
+            # 500번마다 세션 초기화
+            if attempt % 500 == 0:
+                self.add_log("🔄 세션 초기화 중...")
                 try:
-                    self.add_log(f"  → {train.train_number} 예약 시도 중...")
-                    request = ReservationRequest(
-                        departure_station=train.departure_station,
-                        arrival_station=train.arrival_station,
-                        departure_date=train.departure_time.date(),
-                        departure_time=train.departure_time.strftime("%H%M%S"),
-                        passengers=passengers,
-                        train_type=TrainType.SRT,
-                        is_special_seat_allowed=self.srt_special_seat_check.isChecked()
-                    )
-                    reservation = self.srt_service.reserve_train(train, request)
-                    if reservation.success:
-                        self.add_log(f"  ✓ {train.train_number} 예약 성공!")
-                        self.add_log(f"  예약번호: {reservation.reservation_number}")
-
-                        # 결제 정보 검증
-                        if not self._validate_srt_payment_info():
-                            self.add_log("  ✗ 예약은 완료되었으나 결제 정보가 입력되지 않았습니다.")
-                            self.add_log(f"    예약번호: {reservation.reservation_number}")
-                            self.add_log("    알림음 중지 버튼을 눌러 알림음을 중지하고")
-                            self.add_log("    앱에 들어가 10분 내에 결제해주세요.")
-                            self.is_srt_running = False  # 예약 루프 중지
-                            # 반복 알림음 재생 시작
-                            self.alert_thread = threading.Thread(target=self._play_alert_sound_loop, daemon=True)
-                            self.alert_thread.start()
-                            # 시그널로 알림음 중지 버튼 표시
-                            self.log_signals.show_alert_button.emit()
-                            return  # 다른 열차는 시도하지 않고 종료
-
-                        # 결제 진행
-                        payment = self._process_srt_payment(reservation)
-
-                        if payment.success:
-                            self.add_log(f"  ✓ 결제 완료!")
-                            self.is_srt_running = False
-                            # 버튼 상태 업데이트
-                            QTimer.singleShot(0, lambda: self.srt_start_btn.setEnabled(True))
-                            QTimer.singleShot(0, lambda: self.srt_stop_btn.setEnabled(False))
-                            return  # 예약 루프 종료
-                        else:
-                            self.add_log("  ✗ 예약은 완료되었으나 결제에 실패했습니다.")
-                            self.add_log(f"    예약번호: {payment.reservation_number}")
-                            self.add_log("    알림음 중지 버튼을 눌러 알림음을 중지하고")
-                            self.add_log("    앱에 들어가 10분 내에 결제해주세요.")
-                            self.is_srt_running = False  # 예약 루프 중지
-                            # 반복 알림음 재생 시작
-                            self.alert_thread = threading.Thread(target=self._play_alert_sound_loop, daemon=True)
-                            self.alert_thread.start()
-                            # 시그널로 알림음 중지 버튼 표시
-                            self.log_signals.show_alert_button.emit()
-                            return  # 다른 열차는 시도하지 않고 종료
+                    username = self.srt_id_input.text()
+                    password = self.srt_pw_input.text()
+                    self.srt_service.clear()
+                    self.add_log("✓ 세션 초기화 완료")
+                    self.add_log("🔐 재로그인 중...")
+                    login_result = self.srt_service.login(username, password)
+                    if login_result:
+                        self.add_log("✓ 재로그인 성공")
                     else:
-                        self.add_log(f"  ✗ {train.train_number} 예약 실패: {reservation.message}")
-                        delay = random.uniform(RETRY_DELAY_MIN, RETRY_DELAY_MAX)
-                        if idx == len(selected_trains) - 1:
-                            self.add_log(f"⏳ {delay:.1f}초 후 재시도...")
-                        else:
-                            self.add_log(f"⏳ {delay:.1f}초 후 다음 열차 시도...")
-                        time.sleep(delay)
-
+                        self.add_log("✗ 재로그인 실패")
+                        self.is_srt_running = False
+                        return
                 except Exception as e:
-                    self.add_log(f"  ✗ 오류: {str(e)}")
+                    self.add_log(f"✗ 세션 초기화 중 오류: {str(e)}")
+                    self.is_srt_running = False
+                    return
+
+            try:
+                # 선택한 모든 열차를 한 번에 시도
+                train_numbers = ", ".join([t.train_number for t in selected_trains])
+                self.add_log(f"  → 열차 예약 시도 중: {train_numbers}")
+
+                request = ReservationRequest(
+                    departure_station=selected_trains[0].departure_station,
+                    arrival_station=selected_trains[0].arrival_station,
+                    departure_date=selected_trains[0].departure_time.date(),
+                    departure_time=selected_trains[0].departure_time.strftime("%H%M%S"),
+                    passengers=passengers,
+                    train_type=TrainType.SRT
+                )
+                reservation = self.srt_service.reserve_train(selected_trains, request)
+                if reservation.success:
+                    self.add_log(f"  ✓ 예약 성공! (열차: {reservation.train_schedule.train_number})")
+                    self.add_log(f"  예약번호: {reservation.reservation_number}")
+
+                    # 결제 정보 검증
+                    if not self._validate_srt_payment_info():
+                        self.add_log("  ✗ 예약은 완료되었으나 결제 정보가 입력되지 않았습니다.")
+                        self.add_log(f"    예약번호: {reservation.reservation_number}")
+                        self.add_log("    알림음 중지 버튼을 눌러 알림음을 중지하고")
+                        self.add_log("    앱에 들어가 10분 내에 결제해주세요.")
+                        self.is_srt_running = False  # 예약 루프 중지
+                        # 반복 알림음 재생 시작
+                        self.alert_thread = threading.Thread(target=self._play_alert_sound_loop, daemon=True)
+                        self.alert_thread.start()
+                        # 시그널로 알림음 중지 버튼 표시
+                        self.log_signals.show_alert_button.emit()
+                        return  # 예약 루프 종료
+
+                    # 결제 진행
+                    payment = self._process_srt_payment(reservation)
+
+                    if payment.success:
+                        self.add_log(f"  ✓ 결제 완료!")
+                        self.is_srt_running = False
+                        # 버튼 상태 업데이트
+                        QTimer.singleShot(0, lambda: self.srt_start_btn.setEnabled(True))
+                        QTimer.singleShot(0, lambda: self.srt_stop_btn.setEnabled(False))
+                        return  # 예약 루프 종료
+                    else:
+                        self.add_log("  ✗ 예약은 완료되었으나 결제에 실패했습니다.")
+                        self.add_log(f"    예약번호: {payment.reservation_number}")
+                        self.add_log("    알림음 중지 버튼을 눌러 알림음을 중지하고")
+                        self.add_log("    앱에 들어가 10분 내에 결제해주세요.")
+                        self.is_srt_running = False  # 예약 루프 중지
+                        # 반복 알림음 재생 시작
+                        self.alert_thread = threading.Thread(target=self._play_alert_sound_loop, daemon=True)
+                        self.alert_thread.start()
+                        # 시그널로 알림음 중지 버튼 표시
+                        self.log_signals.show_alert_button.emit()
+                        return  # 예약 루프 종료
+                else:
+                    self.add_log(f"  ✗ 예약 실패: {reservation.message}")
+                    delay = random.uniform(RETRY_DELAY_MIN, RETRY_DELAY_MAX)
+                    self.add_log(f"⏳ {delay:.1f}초 후 재시도...")
+                    time.sleep(delay)
+
+            except Exception as e:
+                self.add_log(f"  ✗ 오류: {str(e)}")
+                delay = random.uniform(RETRY_DELAY_MIN, RETRY_DELAY_MAX)
+                time.sleep(delay)
 
     def _play_single_alert_sound(self):
         """OS에 따라 알림음 1회 재생"""

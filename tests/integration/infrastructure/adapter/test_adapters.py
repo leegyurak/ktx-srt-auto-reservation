@@ -78,7 +78,7 @@ class TestKTXServiceIntegration:
         ktx_service._korail = mock_korail
 
         # Reserve
-        result = ktx_service.reserve_train(sample_train_schedule, sample_reservation_request)
+        result = ktx_service.reserve_train([sample_train_schedule], sample_reservation_request)
         assert result.success is True
         assert result.reservation_number == "R123456"
 
@@ -160,7 +160,7 @@ class TestSRTServiceIntegration:
         srt_service._srt = mock_srt
 
         # Reserve
-        result = srt_service.reserve_train(sample_srt_train_schedule, sample_srt_reservation_request)
+        result = srt_service.reserve_train([sample_srt_train_schedule], sample_srt_reservation_request)
         assert result.success is True
         assert result.reservation_number == "R123456"
 

@@ -25,7 +25,7 @@ class TrainService(ABC):
         pass
 
     @abstractmethod
-    def reserve_train(self, schedule: TrainSchedule, request: ReservationRequest) -> ReservationResult:
+    def reserve_train(self, schedule: list[TrainSchedule], request: ReservationRequest) -> ReservationResult:
         """Reserve a specific train"""
         pass
 
@@ -37,6 +37,11 @@ class TrainService(ABC):
     @abstractmethod
     def is_logged_in(self) -> bool:
         """Check if user is logged in"""
+        pass
+
+    @abstractmethod
+    def clear(self) -> None:
+        """Clear client sessions"""
         pass
 
     @property

@@ -142,21 +142,21 @@ class TestSRTServiceReserveTrain:
     """Tests for SRTService reserve_train"""
 
     @patch('src.infrastructure.adapters.srt_service.SRT')
-    def test_reserve_train_not_logged_in(self, mock_srt_class, srt_service, sample_reservation_request):
+    def test_reserve_train_not_logged_in(self, mock_srt_class, srt_service, sample_reservation_request, sample_srt_train_schedule):
         """Test reserving train when not logged in"""
         # Arrange
         srt_service._logged_in = False
-        mock_schedule = Mock()
+        mock_schedules = [sample_srt_train_schedule]
 
         # Act
-        result = srt_service.reserve_train(mock_schedule, sample_reservation_request)
+        result = srt_service.reserve_train(mock_schedules, sample_reservation_request)
 
         # Assert
         assert result.success is False
         assert result.message == "Not logged in"
 
     @patch('src.infrastructure.adapters.srt_service.SRT')
-    def test_reserve_train_not_found(self, mock_srt_class, srt_service, sample_reservation_request):
+    def test_reserve_train_not_found(self, mock_srt_class, srt_service, sample_reservation_request, sample_srt_train_schedule):
         """Test reserving train when train not found"""
         # Arrange
         srt_service._logged_in = True
@@ -164,18 +164,17 @@ class TestSRTServiceReserveTrain:
         mock_srt.search_train.return_value = []
         srt_service._srt = mock_srt
 
-        mock_schedule = Mock()
-        mock_schedule.train_number = "S999"
+        mock_schedules = [sample_srt_train_schedule]
 
         # Act
-        result = srt_service.reserve_train(mock_schedule, sample_reservation_request)
+        result = srt_service.reserve_train(mock_schedules, sample_reservation_request)
 
         # Assert
         assert result.success is False
-        assert result.message == "Train not found"
+        assert result.message == "Any requested trains have no seats"
 
     @patch('src.infrastructure.adapters.srt_service.SRT')
-    def test_reserve_train_no_seats(self, mock_srt_class, srt_service, sample_reservation_request):
+    def test_reserve_train_no_seats(self, mock_srt_class, srt_service, sample_reservation_request, sample_srt_train_schedule):
         """Test reserving train when no seats available"""
         # Arrange
         srt_service._logged_in = True
@@ -188,15 +187,146 @@ class TestSRTServiceReserveTrain:
         mock_srt.search_train.return_value = [mock_train]
         srt_service._srt = mock_srt
 
-        mock_schedule = Mock()
-        mock_schedule.train_number = "S001"
+        mock_schedules = [sample_srt_train_schedule]
 
         # Act
-        result = srt_service.reserve_train(mock_schedule, sample_reservation_request)
+        result = srt_service.reserve_train(mock_schedules, sample_reservation_request)
 
         # Assert
         assert result.success is False
-        assert result.message == "No available seats"
+        assert result.message == "Any requested trains have no seats"
+
+    @patch('src.infrastructure.adapters.srt_service.SRT')
+    def test_reserve_train_success_first_train(self, mock_srt_class, srt_service, sample_reservation_request, sample_srt_train_schedule):
+        """Test successful reservation with first train"""
+        # Arrange
+        srt_service._logged_in = True
+        mock_srt = Mock()
+
+        mock_train = Mock()
+        mock_train.train_number = "S001"
+        mock_train.seat_available.return_value = True
+
+        mock_reservation = Mock()
+        mock_reservation.reservation_number = "R123456"
+
+        mock_srt.search_train.return_value = [mock_train]
+        mock_srt.reserve.return_value = mock_reservation
+        srt_service._srt = mock_srt
+
+        mock_schedules = [sample_srt_train_schedule]
+
+        # Act
+        result = srt_service.reserve_train(mock_schedules, sample_reservation_request)
+
+        # Assert
+        assert result.success is True
+        assert result.reservation_number == "R123456"
+        assert result.train_schedule == sample_srt_train_schedule
+
+    @patch('src.infrastructure.adapters.srt_service.SRT')
+    def test_reserve_train_success_second_train(self, mock_srt_class, srt_service, sample_reservation_request):
+        """Test successful reservation with second train when first has no seats"""
+        # Arrange
+        from src.domain.models.entities import TrainSchedule
+
+        srt_service._logged_in = True
+        mock_srt = Mock()
+
+        # Create two schedules
+        schedule1 = TrainSchedule(
+            train_number="S001",
+            departure_station="수서",
+            arrival_station="부산",
+            departure_time=datetime(2025, 1, 15, 10, 0, 0),
+            arrival_time=datetime(2025, 1, 15, 12, 30, 0),
+            train_type=TrainType.SRT,
+            available_seats=0,
+            price="52000"
+        )
+        schedule2 = TrainSchedule(
+            train_number="S002",
+            departure_station="수서",
+            arrival_station="부산",
+            departure_time=datetime(2025, 1, 15, 11, 0, 0),
+            arrival_time=datetime(2025, 1, 15, 13, 30, 0),
+            train_type=TrainType.SRT,
+            available_seats=10,
+            price="52000"
+        )
+
+        # Mock trains
+        mock_train1 = Mock()
+        mock_train1.train_number = "S001"
+        mock_train1.seat_available.return_value = False
+
+        mock_train2 = Mock()
+        mock_train2.train_number = "S002"
+        mock_train2.seat_available.return_value = True
+
+        mock_reservation = Mock()
+        mock_reservation.reservation_number = "R123456"
+
+        mock_srt.search_train.return_value = [mock_train1, mock_train2]
+        mock_srt.reserve.return_value = mock_reservation
+        srt_service._srt = mock_srt
+
+        mock_schedules = [schedule1, schedule2]
+
+        # Act
+        result = srt_service.reserve_train(mock_schedules, sample_reservation_request)
+
+        # Assert
+        assert result.success is True
+        assert result.reservation_number == "R123456"
+        assert result.train_schedule.train_number == "S002"
+
+    @patch('src.infrastructure.adapters.srt_service.SRT')
+    def test_reserve_train_multiple_schedules(self, mock_srt_class, srt_service, sample_reservation_request):
+        """Test reservation with multiple schedules"""
+        # Arrange
+        from src.domain.models.entities import TrainSchedule
+
+        srt_service._logged_in = True
+        mock_srt = Mock()
+
+        # Create three schedules
+        schedules = [
+            TrainSchedule(
+                train_number=f"S00{i}",
+                departure_station="수서",
+                arrival_station="부산",
+                departure_time=datetime(2025, 1, 15, 10 + i, 0, 0),
+                arrival_time=datetime(2025, 1, 15, 12 + i, 30, 0),
+                train_type=TrainType.SRT,
+                available_seats=10,
+                price="52000"
+            )
+            for i in range(1, 4)
+        ]
+
+        # Mock trains - only third one has seats
+        mock_trains = []
+        for i in range(1, 4):
+            mock_train = Mock()
+            mock_train.train_number = f"S00{i}"
+            mock_train.seat_available.return_value = (i == 3)
+            mock_trains.append(mock_train)
+
+        mock_reservation = Mock()
+        mock_reservation.reservation_number = "R123456"
+
+        mock_srt.search_train.return_value = mock_trains
+        mock_srt.reserve.return_value = mock_reservation
+        srt_service._srt = mock_srt
+
+        # Act
+        result = srt_service.reserve_train(schedules, sample_reservation_request)
+
+        # Assert
+        assert result.success is True
+        assert result.reservation_number == "R123456"
+        assert result.train_schedule.train_number == "S003"
 
 
 class TestSRTServicePayment:
@@ -224,7 +354,8 @@ class TestSRTServicePayment:
         result = srt_service.payment_reservation(mock_reservation, mock_card)
 
         # Assert
-        assert result == False
+        assert result.success is False
+        assert result.message == "Not logged in"
 
     @patch('src.infrastructure.adapters.srt_service.SRT')
     def test_payment_reservation_not_found(self, mock_srt_class, srt_service):
@@ -254,3 +385,45 @@ class TestSRTServicePayment:
         # Assert
         assert result.success is False
         assert result.message == "Reservation not found"
+
+
+class TestSRTServiceClear:
+    """Tests for SRTService clear method"""
+
+    @patch('src.infrastructure.adapters.srt_service.SRT')
+    def test_clear_session(self, mock_srt_class, srt_service):
+        """Test clearing session"""
+        # Arrange
+        mock_srt = Mock()
+        mock_srt.clear = Mock()
+        srt_service._srt = mock_srt
+        srt_service._logged_in = True
+
+        # Act
+        srt_service.clear()
+
+        # Assert
+        assert srt_service.is_logged_in() is False
+        mock_srt.logout.assert_called_once()
+        mock_srt.clear.assert_called_once()
+        assert srt_service._srt is not None
+        assert srt_service._srt != mock_srt  # New SRT instance created
+
+    @patch('src.infrastructure.adapters.srt_service.SRT')
+    def test_clear_creates_new_instance(self, mock_srt_class, srt_service):
+        """Test that clear creates a new SRT instance"""
+        # Arrange
+        old_srt = srt_service._srt
+        old_srt.clear = Mock()
+        srt_service._logged_in = True
+
+        # Mock the SRT class to return a new instance
+        new_mock_srt = Mock()
+        mock_srt_class.return_value = new_mock_srt
+
+        # Act
+        srt_service.clear()
+
+        # Assert
+        mock_srt_class.assert_called_once_with(auto_login=False)
+        assert srt_service._srt == new_mock_srt
