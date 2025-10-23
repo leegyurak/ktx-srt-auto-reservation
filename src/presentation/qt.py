@@ -1104,7 +1104,8 @@ class TrainReservationApp(QMainWindow):
                 departure_date=departure_date,
                 departure_time=departure_time,
                 passengers=passengers,
-                train_type=TrainType.KTX
+                train_type=TrainType.KTX,
+                is_special_seat_allowed=self.ktx_special_seat_check.isChecked()
             )
 
             trains = self.ktx_service.search_trains(request)
@@ -1259,7 +1260,8 @@ class TrainReservationApp(QMainWindow):
                     departure_date=selected_trains[0].departure_time.date(),
                     departure_time=selected_trains[0].departure_time.strftime("%H%M%S"),
                     passengers=passengers,
-                    train_type=TrainType.KTX
+                    train_type=TrainType.KTX,
+                    is_special_seat_allowed=self.ktx_special_seat_check.isChecked()
                 )
                 reservation = self.ktx_service.reserve_train(selected_trains, request)
                 if reservation.success:
@@ -1381,7 +1383,8 @@ class TrainReservationApp(QMainWindow):
                 departure_date=departure_date,
                 departure_time=departure_time,
                 passengers=passengers,
-                train_type=TrainType.SRT
+                train_type=TrainType.SRT,
+                is_special_seat_allowed=self.srt_special_seat_check.isChecked()
             )
 
             trains = self.srt_service.search_trains(request)
@@ -1536,7 +1539,8 @@ class TrainReservationApp(QMainWindow):
                     departure_date=selected_trains[0].departure_time.date(),
                     departure_time=selected_trains[0].departure_time.strftime("%H%M%S"),
                     passengers=passengers,
-                    train_type=TrainType.SRT
+                    train_type=TrainType.SRT,
+                    is_special_seat_allowed=self.srt_special_seat_check.isChecked()
                 )
                 reservation = self.srt_service.reserve_train(selected_trains, request)
                 if reservation.success:
