@@ -96,6 +96,7 @@ class SRTService(TrainService):
             target_train_numbers = [schedule.train_number for schedule in schedules]
 
             for train in trains:
+                reservation = None
                 if train.train_number in target_train_numbers and train.seat_available():
                     # Check for special seat preference
                     if train.special_seat_available() and (request.is_special_seat_allowed or request.is_only_special_seat):
