@@ -98,10 +98,11 @@ class SRTService(TrainService):
             for train in trains:
                 if train.train_number in target_train_numbers and train.seat_available():
                     # Check for special seat preference
-                    if train.special_seat_available() and request.is_special_seat_allowed:
+                    if train.special_seat_available() and (request.is_special_seat_allowed or request.is_only_special_seat):
                         reservation = self._srt.reserve(train=train, passengers=passengers, option=SeatType.SPECIAL_ONLY)
                     else:
-                        reservation = self._srt.reserve(train=train, passengers=passengers, option=SeatType.GENERAL_ONLY)
+                        if not request.is_only_special_seat:
+                            reservation = self._srt.reserve(train=train, passengers=passengers, option=SeatType.GENERAL_ONLY)
 
                     if reservation:
                         return ReservationResult(

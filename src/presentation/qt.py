@@ -549,7 +549,11 @@ class TrainReservationApp(QMainWindow):
         self.ktx_pw_input = QLineEdit()
         self.ktx_pw_input.setPlaceholderText("비밀번호를 입력하세요")
         self.ktx_pw_input.setEchoMode(QLineEdit.EchoMode.Password)
-        self.ktx_pw_input.setInputMethodHints(Qt.InputMethodHint.ImhLatinOnly)
+        self.ktx_pw_input.setInputMethodHints(
+            Qt.InputMethodHint.ImhLatinOnly |
+            Qt.InputMethodHint.ImhNoPredictiveText |
+            Qt.InputMethodHint.ImhNoAutoUppercase
+        )
 
         self.ktx_pw_toggle_btn = QPushButton("Show")
         self.ktx_pw_toggle_btn.setFixedWidth(80)
@@ -634,6 +638,21 @@ class TrainReservationApp(QMainWindow):
         # 특실 옵션
         self.ktx_special_seat_check = QCheckBox("특실 우선 예약")
         search_card.add_widget(self.ktx_special_seat_check)
+
+        self.ktx_only_special_seat_check = QCheckBox("특실만 탐색")
+        search_card.add_widget(self.ktx_only_special_seat_check)
+
+        # 두 체크박스가 동시에 체크되지 않도록 설정
+        def on_ktx_special_seat_changed(state):
+            if state and self.ktx_only_special_seat_check.isChecked():
+                self.ktx_only_special_seat_check.setChecked(False)
+
+        def on_ktx_only_special_seat_changed(state):
+            if state and self.ktx_special_seat_check.isChecked():
+                self.ktx_special_seat_check.setChecked(False)
+
+        self.ktx_special_seat_check.stateChanged.connect(on_ktx_special_seat_changed)
+        self.ktx_only_special_seat_check.stateChanged.connect(on_ktx_only_special_seat_changed)
 
         self.ktx_search_btn = QPushButton("🔍 열차 검색")
         self.ktx_search_btn.setObjectName("searchButton")
@@ -754,7 +773,11 @@ class TrainReservationApp(QMainWindow):
         self.srt_pw_input = QLineEdit()
         self.srt_pw_input.setPlaceholderText("비밀번호를 입력하세요")
         self.srt_pw_input.setEchoMode(QLineEdit.EchoMode.Password)
-        self.srt_pw_input.setInputMethodHints(Qt.InputMethodHint.ImhLatinOnly)
+        self.srt_pw_input.setInputMethodHints(
+            Qt.InputMethodHint.ImhLatinOnly |
+            Qt.InputMethodHint.ImhNoPredictiveText |
+            Qt.InputMethodHint.ImhNoAutoUppercase
+        )
 
         self.srt_pw_toggle_btn = QPushButton("Show")
         self.srt_pw_toggle_btn.setFixedWidth(80)
@@ -839,6 +862,21 @@ class TrainReservationApp(QMainWindow):
         # 특실 옵션
         self.srt_special_seat_check = QCheckBox("특실 우선 예약")
         search_card.add_widget(self.srt_special_seat_check)
+
+        self.srt_only_special_seat_check = QCheckBox("특실만 탐색")
+        search_card.add_widget(self.srt_only_special_seat_check)
+
+        # 두 체크박스가 동시에 체크되지 않도록 설정
+        def on_srt_special_seat_changed(state):
+            if state and self.srt_only_special_seat_check.isChecked():
+                self.srt_only_special_seat_check.setChecked(False)
+
+        def on_srt_only_special_seat_changed(state):
+            if state and self.srt_special_seat_check.isChecked():
+                self.srt_special_seat_check.setChecked(False)
+
+        self.srt_special_seat_check.stateChanged.connect(on_srt_special_seat_changed)
+        self.srt_only_special_seat_check.stateChanged.connect(on_srt_only_special_seat_changed)
 
         self.srt_search_btn = QPushButton("🔍 열차 검색")
         self.srt_search_btn.setObjectName("searchButton")
@@ -1105,7 +1143,8 @@ class TrainReservationApp(QMainWindow):
                 departure_time=departure_time,
                 passengers=passengers,
                 train_type=TrainType.KTX,
-                is_special_seat_allowed=self.ktx_special_seat_check.isChecked()
+                is_special_seat_allowed=self.ktx_special_seat_check.isChecked(),
+                is_only_special_seat=self.ktx_only_special_seat_check.isChecked()
             )
 
             trains = self.ktx_service.search_trains(request)
@@ -1261,7 +1300,8 @@ class TrainReservationApp(QMainWindow):
                     departure_time=selected_trains[0].departure_time.strftime("%H%M%S"),
                     passengers=passengers,
                     train_type=TrainType.KTX,
-                    is_special_seat_allowed=self.ktx_special_seat_check.isChecked()
+                    is_special_seat_allowed=self.ktx_special_seat_check.isChecked(),
+                    is_only_special_seat=self.ktx_only_special_seat_check.isChecked()
                 )
                 reservation = self.ktx_service.reserve_train(selected_trains, request)
                 if reservation.success:
@@ -1384,7 +1424,8 @@ class TrainReservationApp(QMainWindow):
                 departure_time=departure_time,
                 passengers=passengers,
                 train_type=TrainType.SRT,
-                is_special_seat_allowed=self.srt_special_seat_check.isChecked()
+                is_special_seat_allowed=self.srt_special_seat_check.isChecked(),
+                is_only_special_seat=self.srt_only_special_seat_check.isChecked()
             )
 
             trains = self.srt_service.search_trains(request)
@@ -1540,7 +1581,8 @@ class TrainReservationApp(QMainWindow):
                     departure_time=selected_trains[0].departure_time.strftime("%H%M%S"),
                     passengers=passengers,
                     train_type=TrainType.SRT,
-                    is_special_seat_allowed=self.srt_special_seat_check.isChecked()
+                    is_special_seat_allowed=self.srt_special_seat_check.isChecked(),
+                    is_only_special_seat=self.srt_only_special_seat_check.isChecked()
                 )
                 reservation = self.srt_service.reserve_train(selected_trains, request)
                 if reservation.success:

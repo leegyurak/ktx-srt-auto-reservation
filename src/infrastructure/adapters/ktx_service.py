@@ -96,10 +96,11 @@ class KTXService(TrainService):
             for train in trains:
                 if train.train_no in target_train_numbers and train.has_seat():
                     # Check for special seat preference
-                    if train.has_special_seat() and request.is_special_seat_allowed:
+                    if train.has_special_seat() and (request.is_special_seat_allowed or request.is_only_special_seat):
                         reservation = self._korail.reserve(train=train, passengers=passengers, option=ReserveOption.SPECIAL_ONLY)
                     else:
-                        reservation = self._korail.reserve(train=train, passengers=passengers, option=ReserveOption.GENERAL_ONLY)
+                        if not request.is_only_special_seat:
+                            reservation = self._korail.reserve(train=train, passengers=passengers, option=ReserveOption.GENERAL_ONLY)
 
                     if reservation:
                         return ReservationResult(

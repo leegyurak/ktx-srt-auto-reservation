@@ -44,6 +44,7 @@ class ReservationRequest:
     passengers: List[Passenger] = None
     train_type: Optional[TrainType] = None
     is_special_seat_allowed: bool = False
+    is_only_special_seat: bool = False
 
     def __post_init__(self):
         if self.passengers is None:
