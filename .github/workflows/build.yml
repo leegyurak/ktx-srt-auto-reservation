@@ -26,9 +26,14 @@ jobs:
       - name: Install dependencies
         run: uv sync --all-extras
 
+      - name: Install additional Windows dependencies
+        run: |
+          uv pip install --force-reinstall curl-cffi certifi
+          uv pip list | findstr "curl-cffi certifi cryptography"
+
       - name: Build Windows executable
         run: |
-          uv run pyinstaller --name KTX-SRT-Macro --onefile --windowed --icon "assets/favicon.ico" --add-data "src;src" --add-data "assets;assets" --noupx main.py
+          uv run pyinstaller KTX-SRT-Macro-Windows.spec --noconfirm
 
       - name: Rename Windows executable
         run: |

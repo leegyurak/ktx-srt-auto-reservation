@@ -38,20 +38,19 @@ try:
 except Exception as e:
     print(f"Warning: Could not collect Crypto libraries: {e}")
 
-# keyring backends for macOS
+# keyring backends for Windows
 hiddenimports += [
-    'keyring.backends.macOS',
+    'keyring.backends.Windows',
     'keyring.backends.chainer',
     'keyring.backends.fail',
 ]
 
-# PyQt6 플랫폼 플러그인 추가
+# PyQt6 플랫폼 플러그인 추가 (Windows에서 필수)
 hiddenimports += [
     'PyQt6.QtCore',
     'PyQt6.QtGui',
     'PyQt6.QtWidgets',
 ]
-
 
 a = Analysis(
     ['main.py'],
@@ -71,33 +70,21 @@ pyz = PYZ(a.pure)
 exe = EXE(
     pyz,
     a.scripts,
+    a.binaries,
+    a.datas,
     [],
-    exclude_binaries=True,
     name='KTX-SRT-Macro',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
     upx=False,
+    upx_exclude=[],
+    runtime_tmpdir=None,
     console=False,
     disable_windowed_traceback=False,
     argv_emulation=False,
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=['assets/favicon.icns'],
-)
-coll = COLLECT(
-    exe,
-    a.binaries,
-    a.datas,
-    strip=False,
-    upx=False,
-    upx_exclude=[],
-    name='KTX-SRT-Macro',
-)
-app = BUNDLE(
-    coll,
-    name='KTX-SRT-Macro.app',
-    icon='assets/favicon.icns',
-    bundle_identifier='com.leegyurak.ktx-srt-macro',
+    icon='assets/favicon.ico',
 )
