@@ -559,7 +559,12 @@ class TrainReservationApp(QMainWindow):
         self.ktx_pw_input = QLineEdit()
         self.ktx_pw_input.setPlaceholderText("비밀번호를 입력하세요")
         self.ktx_pw_input.setEchoMode(QLineEdit.EchoMode.Password)
-        self.ktx_pw_input.setInputMethodHints(Qt.InputMethodHint.ImhLatinOnly)
+        # Allow full ASCII input; avoid IME/predictive changes (Windows-safe)
+        self.ktx_pw_input.setInputMethodHints(
+            Qt.InputMethodHint.ImhHiddenText
+            | Qt.InputMethodHint.ImhNoPredictiveText
+            | Qt.InputMethodHint.ImhNoAutoUppercase
+        )
 
         self.ktx_pw_toggle_btn = QPushButton("Show")
         self.ktx_pw_toggle_btn.setFixedWidth(80)
@@ -779,7 +784,12 @@ class TrainReservationApp(QMainWindow):
         self.srt_pw_input = QLineEdit()
         self.srt_pw_input.setPlaceholderText("비밀번호를 입력하세요")
         self.srt_pw_input.setEchoMode(QLineEdit.EchoMode.Password)
-        self.srt_pw_input.setInputMethodHints(Qt.InputMethodHint.ImhLatinOnly)
+        # Allow full ASCII input; avoid IME/predictive changes (Windows-safe)
+        self.srt_pw_input.setInputMethodHints(
+            Qt.InputMethodHint.ImhHiddenText
+            | Qt.InputMethodHint.ImhNoPredictiveText
+            | Qt.InputMethodHint.ImhNoAutoUppercase
+        )
 
         self.srt_pw_toggle_btn = QPushButton("Show")
         self.srt_pw_toggle_btn.setFixedWidth(80)
