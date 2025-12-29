@@ -1,5 +1,6 @@
 """Tests for credential storage"""
 import pytest
+import tempfile
 from pathlib import Path
 
 from src.infrastructure.security.credential_storage import CredentialStorage
@@ -10,11 +11,15 @@ from src.infrastructure.database.repository import SQLAlchemyUserRepository, SQL
 @pytest.fixture
 def credential_storage() -> CredentialStorage:
     """Fixture that provides a CredentialStorage instance with test database"""
-    # Use a test database
+    # Use a test database in platform-appropriate temp directory
     original_get_db_path = DatabaseManager.get_db_path
 
+    # Create a temporary directory that works on all platforms
+    temp_dir = Path(tempfile.gettempdir())
+    test_db_file = temp_dir / "test_credentials_storage.db"
+
     def test_db_path() -> Path:
-        return Path("/tmp/test_credentials_storage.db")
+        return test_db_file
 
     DatabaseManager.get_db_path = test_db_path
     DatabaseManager._engine = None
@@ -30,11 +35,30 @@ def credential_storage() -> CredentialStorage:
 
     yield storage
 
-    # Cleanup
-    DatabaseManager.get_db_path = original_get_db_path
-    test_db = Path("/tmp/test_credentials_storage.db")
-    if test_db.exists():
-        test_db.unlink()
+    # Cleanup: close all connections and delete database file
+    try:
+        # Close engine and sessions first
+        if DatabaseManager._engine is not None:
+            DatabaseManager._engine.dispose()
+        DatabaseManager._engine = None
+        DatabaseManager._session_factory = None
+
+        # Restore original path function
+        DatabaseManager.get_db_path = original_get_db_path
+
+        # Remove database file and related files
+        if test_db_file.exists():
+            test_db_file.unlink()
+
+        # Remove any SQLite journal/wal files
+        for ext in ['-journal', '-wal', '-shm']:
+            journal_file = test_db_file.parent / f"{test_db_file.name}{ext}"
+            if journal_file.exists():
+                journal_file.unlink()
+    except Exception as e:
+        # If cleanup fails, at least try to restore the path
+        DatabaseManager.get_db_path = original_get_db_path
+        print(f"Warning: Test cleanup failed: {e}")
 
 
 class TestKTXLoginCredentials:
