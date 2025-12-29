@@ -7,11 +7,21 @@ datas = [('src', 'src'), ('assets', 'assets')]
 binaries = []
 hiddenimports = collect_submodules('PyQt6')
 
-# curl_cffi 지원 추가
+# curl_cffi 지원 추가 (HTTPS 로그인에 필수)
 try:
-    # curl_cffi의 네이티브 라이브러리 수집
+    # curl_cffi의 네이티브 라이브러리 수집 (libcurl dylib 포함)
     binaries += collect_dynamic_libs('curl_cffi')
     hiddenimports += collect_submodules('curl_cffi')
+
+    # curl_cffi의 핵심 모듈들 명시적으로 추가
+    hiddenimports += [
+        'curl_cffi',
+        'curl_cffi.requests',
+        'curl_cffi.const',
+        '_cffi_backend',
+    ]
+
+    print("✓ curl_cffi libraries collected successfully")
 except Exception as e:
     print(f"Warning: Could not collect curl_cffi libraries: {e}")
     print("The application will fallback to requests library")
@@ -37,6 +47,20 @@ try:
     hiddenimports += collect_submodules('Crypto')
 except Exception as e:
     print(f"Warning: Could not collect Crypto libraries: {e}")
+
+# SQLAlchemy 및 데이터베이스 관련 (v1.1.0 credential storage)
+try:
+    hiddenimports += collect_submodules('sqlalchemy')
+    hiddenimports += [
+        'sqlalchemy',
+        'sqlalchemy.ext.declarative',
+        'sqlalchemy.orm',
+        'sqlalchemy.sql',
+        'sqlalchemy.dialects.sqlite',
+    ]
+    print("✓ SQLAlchemy modules collected successfully")
+except Exception as e:
+    print(f"Warning: Could not collect SQLAlchemy modules: {e}")
 
 # keyring backends for macOS
 hiddenimports += [

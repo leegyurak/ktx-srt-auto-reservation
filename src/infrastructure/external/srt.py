@@ -530,7 +530,14 @@ class NetFunnelHelper:
 
     def __init__(self, debug=False):
         if HAS_CURL_CFFI:
-            self._session = curl_cffi.Session(impersonate="chrome")
+            try:
+                import certifi
+                self._session = curl_cffi.Session(
+                    impersonate="chrome",
+                    verify=certifi.where()
+                )
+            except ImportError:
+                self._session = curl_cffi.Session(impersonate="chrome")
         else:
             self._session = requests.session()
         self._session.headers.update(self.DEFAULT_HEADERS)
@@ -650,7 +657,14 @@ class SRT:
         self, srt_id: str | None = None, srt_pw: str | None = None, auto_login: bool = True, verbose: bool = False
     ) -> None:
         if HAS_CURL_CFFI:
-            self._session = curl_cffi.Session(impersonate="chrome")
+            try:
+                import certifi
+                self._session = curl_cffi.Session(
+                    impersonate="chrome",
+                    verify=certifi.where()
+                )
+            except ImportError:
+                self._session = curl_cffi.Session(impersonate="chrome")
         else:
             self._session = requests.session()
         self._session.headers.update(DEFAULT_HEADERS)

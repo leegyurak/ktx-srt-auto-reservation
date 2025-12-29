@@ -421,7 +421,14 @@ class NetFunnelHelper:
 
     def __init__(self):
         if HAS_CURL_CFFI:
-            self._session = curl_cffi.Session(impersonate="chrome131_android")
+            try:
+                import certifi
+                self._session = curl_cffi.Session(
+                    impersonate="chrome131_android",
+                    verify=certifi.where()
+                )
+            except ImportError:
+                self._session = curl_cffi.Session(impersonate="chrome131_android")
         else:
             self._session = requests.session()
         self._session.headers.update(self.DEFAULT_HEADERS)
@@ -510,7 +517,14 @@ class Korail:
 
     def __init__(self, korail_id=None, korail_pw=None, auto_login=True, verbose=False):
         if HAS_CURL_CFFI:
-            self._session = curl_cffi.Session(impersonate="chrome131_android")
+            try:
+                import certifi
+                self._session = curl_cffi.Session(
+                    impersonate="chrome131_android",
+                    verify=certifi.where()
+                )
+            except ImportError:
+                self._session = curl_cffi.Session(impersonate="chrome131_android")
         else:
             self._session = requests.session()
         self._session.headers.update(DEFAULT_HEADERS)
