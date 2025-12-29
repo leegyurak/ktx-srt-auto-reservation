@@ -1,0 +1,43 @@
+name: Windows Remote Debug
+
+on:
+  workflow_dispatch:  # 수동으로 실행
+
+jobs:
+  debug:
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v4
+      with:
+        version: "latest"
+
+    - name: Set up Python
+      run: uv python install 3.12
+
+    - name: Install dependencies
+      run: uv sync
+
+    - name: Show environment info
+      run: |
+        echo "Python version:"
+        uv run python --version
+        echo ""
+        echo "Installed packages:"
+        uv pip list
+        echo ""
+        echo "Working directory:"
+        pwd
+        echo ""
+        echo "Files:"
+        ls
+
+    - name: Setup tmate session (SSH access)
+      uses: mxschmitt/action-tmate@v3
+      timeout-minutes: 30
+      with:
+        limit-access-to-actor: true  # 본인만 접속 가능
