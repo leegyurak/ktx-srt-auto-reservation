@@ -52,55 +52,81 @@ jobs:
         Write-Host "Password: $password"
         Write-Host "============================================"
 
-    - name: Setup Cloudflare Tunnel (Free)
+    - name: Download and Setup Bore Tunnel (Free TCP Tunnel)
       run: |
-        # Cloudflared 다운로드 (무료, 인증 불필요)
-        Invoke-WebRequest -Uri "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.exe" -OutFile "cloudflared.exe"
+        # Bore 다운로드 (무료, 인증 불필요, TCP 전용)
+        Invoke-WebRequest -Uri "https://github.com/ekzhang/bore/releases/latest/download/bore-v0.5.1-x86_64-pc-windows-msvc.zip" -OutFile "bore.zip"
+        Expand-Archive -Path "bore.zip" -DestinationPath "."
 
-        # RDP 포트(3389)를 Cloudflare 터널로 노출
-        Start-Process -FilePath ".\cloudflared.exe" -ArgumentList "tunnel --url tcp://localhost:3389" -NoNewWindow -RedirectStandardOutput "tunnel.log" -RedirectStandardError "tunnel_err.log"
+        Write-Host "============================================"
+        Write-Host "Starting Bore TCP Tunnel..."
+        Write-Host "============================================"
+
+        # RDP 포트(3389)를 bore.pub으로 터널링
+        Start-Process -FilePath ".\bore.exe" -ArgumentList "local 3389 --to bore.pub" -NoNewWindow -RedirectStandardOutput "tunnel.log" -RedirectStandardError "tunnel_err.log"
 
         Write-Host "Waiting for tunnel to start..."
-        Start-Sleep -Seconds 15
+        Start-Sleep -Seconds 10
 
-        # 로그에서 터널 URL 찾기
-        if (Test-Path "tunnel.log") {
-          $content = Get-Content "tunnel.log" -Raw
-          Write-Host "============================================"
-          Write-Host "Cloudflare Tunnel Log:"
-          Write-Host $content
-          Write-Host "============================================"
+        # 로그 확인
+        $maxAttempts = 20
+        $attempt = 0
+        $port = $null
 
-          # trycloudflare.com URL 추출
-          if ($content -match "(https://[a-z0-9-]+\.trycloudflare\.com)") {
-            $tunnelUrl = $matches[1]
-            Write-Host ""
-            Write-Host "============================================"
-            Write-Host "RDP Connection via Cloudflare Tunnel"
-            Write-Host "============================================"
-            Write-Host "Tunnel URL: $tunnelUrl"
-            Write-Host "Username: runneradmin"
-            Write-Host "Password: P@ssw0rd123!"
-            Write-Host ""
-            Write-Host "How to connect from your Mac:"
-            Write-Host "1. Install cloudflared:"
-            Write-Host "   brew install cloudflare/cloudflare/cloudflared"
-            Write-Host ""
-            Write-Host "2. Create local tunnel:"
-            Write-Host "   cloudflared access tcp --hostname $tunnelUrl --url localhost:3389"
-            Write-Host ""
-            Write-Host "3. Connect via Microsoft Remote Desktop to:"
-            Write-Host "   Host: localhost:3389"
-            Write-Host "   Username: runneradmin"
-            Write-Host "   Password: P@ssw0rd123!"
-            Write-Host "============================================"
+        while ($attempt -lt $maxAttempts -and $null -eq $port) {
+          Start-Sleep -Seconds 2
+
+          if (Test-Path "tunnel.log") {
+            $content = Get-Content "tunnel.log" -Raw
+
+            # "listening at bore.pub:XXXXX" 패턴 찾기
+            if ($content -match "listening at bore\.pub:(\d+)") {
+              $port = $matches[1]
+              break
+            }
           }
+
+          if (Test-Path "tunnel_err.log") {
+            $errContent = Get-Content "tunnel_err.log" -Raw
+            if ($errContent -match "listening at bore\.pub:(\d+)") {
+              $port = $matches[1]
+              break
+            }
+          }
+
+          $attempt++
         }
 
-        if (Test-Path "tunnel_err.log") {
+        Write-Host ""
+        Write-Host "============================================"
+
+        if ($null -ne $port) {
+          Write-Host "RDP Connection via Bore Tunnel - SUCCESS!"
+          Write-Host "============================================"
+          Write-Host "Host: bore.pub"
+          Write-Host "Port: $port"
+          Write-Host "Username: runneradmin"
+          Write-Host "Password: P@ssw0rd123!"
           Write-Host ""
-          Write-Host "Tunnel errors (if any):"
-          Get-Content "tunnel_err.log"
+          Write-Host "Connect from your Mac using Microsoft Remote Desktop:"
+          Write-Host "1. Open Microsoft Remote Desktop"
+          Write-Host "2. Add PC"
+          Write-Host "3. PC name: bore.pub:$port"
+          Write-Host "4. User account: runneradmin / P@ssw0rd123!"
+          Write-Host "5. Connect!"
+          Write-Host "============================================"
+        } else {
+          Write-Host "WARNING: Could not detect tunnel port"
+          Write-Host "============================================"
+          Write-Host "Tunnel log:"
+          if (Test-Path "tunnel.log") {
+            Get-Content "tunnel.log"
+          }
+          Write-Host ""
+          Write-Host "Tunnel errors:"
+          if (Test-Path "tunnel_err.log") {
+            Get-Content "tunnel_err.log"
+          }
         }
 
     - name: Show connection info and keep alive
