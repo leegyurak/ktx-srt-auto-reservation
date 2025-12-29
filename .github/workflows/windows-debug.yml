@@ -36,8 +36,6 @@ jobs:
         echo "Files:"
         ls
 
-    - name: Setup tmate session (SSH access)
-      uses: mxschmitt/action-tmate@v3
+    - name: Enable RDP Access
+      uses: hheennrryyb/free-rdp@v1.0.0
       timeout-minutes: 30
-      with:
-        limit-access-to-actor: true  # 본인만 접속 가능
