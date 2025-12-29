@@ -36,61 +36,104 @@ jobs:
         echo "Files:"
         ls
 
-    - name: Enable RDP Access
+    - name: Enable RDP
       run: |
-        # RDP 활성화
         Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -name "fDenyTSConnections" -value 0
         Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
+        Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "UserAuthentication" -Value 0
 
-        # 사용자 비밀번호 설정
-        $password = "GithubActions123!"
+        # 비밀번호 설정
+        $password = "P@ssw0rd123!"
         net user runneradmin $password
 
         Write-Host "============================================"
-        Write-Host "RDP is now enabled!"
+        Write-Host "RDP Enabled"
         Write-Host "Username: runneradmin"
         Write-Host "Password: $password"
         Write-Host "============================================"
 
-    - name: Setup ngrok for RDP
+    - name: Setup Cloudflare Tunnel (Free)
       run: |
-        # ngrok 다운로드 및 설치
-        Invoke-WebRequest -Uri "https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-windows-amd64.zip" -OutFile "ngrok.zip"
-        Expand-Archive -Path "ngrok.zip" -DestinationPath "."
+        # Cloudflared 다운로드 (무료, 인증 불필요)
+        Invoke-WebRequest -Uri "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.exe" -OutFile "cloudflared.exe"
 
-        # RDP 포트(3389)를 ngrok으로 터널링
-        Start-Process -FilePath ".\ngrok.exe" -ArgumentList "tcp 3389 --log stdout" -NoNewWindow -RedirectStandardOutput "ngrok.log"
-        Start-Sleep -Seconds 10
+        # RDP 포트(3389)를 Cloudflare 터널로 노출
+        Start-Process -FilePath ".\cloudflared.exe" -ArgumentList "tunnel --url tcp://localhost:3389" -NoNewWindow -RedirectStandardOutput "tunnel.log" -RedirectStandardError "tunnel_err.log"
 
-        # ngrok URL 확인
-        try {
-          $response = Invoke-RestMethod -Uri "http://localhost:4040/api/tunnels"
-          $publicUrl = $response.tunnels[0].public_url
-          $host = $publicUrl -replace "tcp://", ""
+        Write-Host "Waiting for tunnel to start..."
+        Start-Sleep -Seconds 15
 
+        # 로그에서 터널 URL 찾기
+        if (Test-Path "tunnel.log") {
+          $content = Get-Content "tunnel.log" -Raw
           Write-Host "============================================"
-          Write-Host "RDP Connection Details:"
-          Write-Host "Host: $host"
-          Write-Host "Username: runneradmin"
-          Write-Host "Password: GithubActions123!"
+          Write-Host "Cloudflare Tunnel Log:"
+          Write-Host $content
           Write-Host "============================================"
-          Write-Host ""
-          Write-Host "Connect using Microsoft Remote Desktop:"
-          Write-Host "1. Open Microsoft Remote Desktop"
-          Write-Host "2. Add PC with address: $host"
-          Write-Host "3. Enter username and password above"
-          Write-Host "============================================"
-        } catch {
-          Write-Host "Waiting for ngrok to start..."
-          Start-Sleep -Seconds 5
-          Get-Content "ngrok.log"
+
+          # trycloudflare.com URL 추출
+          if ($content -match "(https://[a-z0-9-]+\.trycloudflare\.com)") {
+            $tunnelUrl = $matches[1]
+            Write-Host ""
+            Write-Host "============================================"
+            Write-Host "RDP Connection via Cloudflare Tunnel"
+            Write-Host "============================================"
+            Write-Host "Tunnel URL: $tunnelUrl"
+            Write-Host "Username: runneradmin"
+            Write-Host "Password: P@ssw0rd123!"
+            Write-Host ""
+            Write-Host "How to connect from your Mac:"
+            Write-Host "1. Install cloudflared:"
+            Write-Host "   brew install cloudflare/cloudflare/cloudflared"
+            Write-Host ""
+            Write-Host "2. Create local tunnel:"
+            Write-Host "   cloudflared access tcp --hostname $tunnelUrl --url localhost:3389"
+            Write-Host ""
+            Write-Host "3. Connect via Microsoft Remote Desktop to:"
+            Write-Host "   Host: localhost:3389"
+            Write-Host "   Username: runneradmin"
+            Write-Host "   Password: P@ssw0rd123!"
+            Write-Host "============================================"
+          }
         }
 
-    - name: Keep runner alive
+        if (Test-Path "tunnel_err.log") {
+          Write-Host ""
+          Write-Host "Tunnel errors (if any):"
+          Get-Content "tunnel_err.log"
+        }
+
+    - name: Show connection info and keep alive
       run: |
-        Write-Host "Session is active. Connect via RDP to debug."
-        Write-Host "Working directory: $PWD"
-        Write-Host "To run the app: uv run main.py"
         Write-Host ""
-        Write-Host "This session will remain active for 30 minutes..."
-        Start-Sleep -Seconds 1800
+        Write-Host "============================================"
+        Write-Host "Session is active for 30 minutes"
+        Write-Host "============================================"
+        Write-Host "Working directory: $PWD"
+        Write-Host ""
+        Write-Host "To test the app after connecting via RDP:"
+        Write-Host "  1. Open PowerShell on the RDP session"
+        Write-Host "  2. cd D:\a\srtmacro\srtmacro"
+        Write-Host "  3. uv run main.py"
+        Write-Host ""
+        Write-Host "The GUI will appear on the RDP desktop!"
+        Write-Host "============================================"
+
+        # 30분 동안 유지
+        for ($i = 0; $i -lt 360; $i++) {
+          Start-Sleep -Seconds 5
+
+          # 30초마다 터널 상태 확인
+          if ($i % 6 -eq 0) {
+            $minutes = [math]::Floor($i * 5 / 60)
+            Write-Host "Session active for $minutes minutes..."
+
+            # 터널 로그 확인
+            if (Test-Path "tunnel.log") {
+              $logSize = (Get-Item "tunnel.log").Length
+              Write-Host "  Tunnel log size: $logSize bytes"
+            }
+          }
+        }
+
+        Write-Host "Session timeout reached (30 minutes)."
