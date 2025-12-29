@@ -37,5 +37,60 @@ jobs:
         ls
 
     - name: Enable RDP Access
-      uses: hheennrryyb/free-rdp@v1.0.0
-      timeout-minutes: 30
+      run: |
+        # RDP 활성화
+        Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -name "fDenyTSConnections" -value 0
+        Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
+
+        # 사용자 비밀번호 설정
+        $password = "GithubActions123!"
+        net user runneradmin $password
+
+        Write-Host "============================================"
+        Write-Host "RDP is now enabled!"
+        Write-Host "Username: runneradmin"
+        Write-Host "Password: $password"
+        Write-Host "============================================"
+
+    - name: Setup ngrok for RDP
+      run: |
+        # ngrok 다운로드 및 설치
+        Invoke-WebRequest -Uri "https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-windows-amd64.zip" -OutFile "ngrok.zip"
+        Expand-Archive -Path "ngrok.zip" -DestinationPath "."
+
+        # RDP 포트(3389)를 ngrok으로 터널링
+        Start-Process -FilePath ".\ngrok.exe" -ArgumentList "tcp 3389 --log stdout" -NoNewWindow -RedirectStandardOutput "ngrok.log"
+        Start-Sleep -Seconds 10
+
+        # ngrok URL 확인
+        try {
+          $response = Invoke-RestMethod -Uri "http://localhost:4040/api/tunnels"
+          $publicUrl = $response.tunnels[0].public_url
+          $host = $publicUrl -replace "tcp://", ""
+
+          Write-Host "============================================"
+          Write-Host "RDP Connection Details:"
+          Write-Host "Host: $host"
+          Write-Host "Username: runneradmin"
+          Write-Host "Password: GithubActions123!"
+          Write-Host "============================================"
+          Write-Host ""
+          Write-Host "Connect using Microsoft Remote Desktop:"
+          Write-Host "1. Open Microsoft Remote Desktop"
+          Write-Host "2. Add PC with address: $host"
+          Write-Host "3. Enter username and password above"
+          Write-Host "============================================"
+        } catch {
+          Write-Host "Waiting for ngrok to start..."
+          Start-Sleep -Seconds 5
+          Get-Content "ngrok.log"
+        }
+
+    - name: Keep runner alive
+      run: |
+        Write-Host "Session is active. Connect via RDP to debug."
+        Write-Host "Working directory: $PWD"
+        Write-Host "To run the app: uv run main.py"
+        Write-Host ""
+        Write-Host "This session will remain active for 30 minutes..."
+        Start-Sleep -Seconds 1800
