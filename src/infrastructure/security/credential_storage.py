@@ -1,139 +1,189 @@
-"""Secure credential storage using platform-specific keychains"""
-import keyring
-from typing import Optional
-
+"""Secure credential storage using SQLite with AES-256-CBC encryption"""
 from src.infrastructure.security.dto import LoginCredentials, PaymentCredentials
+from src.infrastructure.security.encryption import EncryptionService
+from src.infrastructure.database.session import DatabaseManager
+from src.domain.repositories.credential_repository import IUserRepository, ICardRepository
 
 
 class CredentialStorage:
     """
-    Platform-specific secure credential storage
+    SQLite-based secure credential storage with AES-256-CBC encryption
 
-    Uses:
-    - macOS: Keychain
-    - Windows: Windows Credential Locker
-    - Linux: Secret Service API (freedesktop.org)
+    All sensitive data is encrypted using AES-256-CBC with a key derived from the MAC address.
+    Data is stored in SQLite database at ~/.ktx-srt-macro/credentials.db
+
+    This class follows Clean Architecture principles:
+    - Depends on domain interfaces (IUserRepository, ICardRepository)
+    - Infrastructure implementations are injected via constructor
     """
 
-    SERVICE_NAME = "KTX-SRT-Macro"
+    def __init__(
+        self,
+        user_repository: IUserRepository,
+        card_repository: ICardRepository
+    ) -> None:
+        """
+        Initialize credential storage with repository dependencies
 
-    # Key names for different credential types
-    KEY_KTX_USERNAME = "ktx_username"
-    KEY_KTX_PASSWORD = "ktx_password"
-    KEY_SRT_USERNAME = "srt_username"
-    KEY_SRT_PASSWORD = "srt_password"
-
-    # Payment credentials (shared between KTX and SRT)
-    KEY_CARD_NUMBER = "card_number"
-    KEY_CARD_PASSWORD = "card_password"
-    KEY_CARD_EXPIRE = "card_expire"
-    KEY_CARD_VALIDATION = "card_validation"
-    KEY_CARD_CORPORATE = "card_corporate"
-
-    @staticmethod
-    def _set_credential(key: str, value: str) -> None:
-        """Store credential securely"""
-        keyring.set_password(CredentialStorage.SERVICE_NAME, key, value)
-
-    @staticmethod
-    def _get_credential(key: str) -> Optional[str]:
-        """Retrieve credential securely"""
-        return keyring.get_password(CredentialStorage.SERVICE_NAME, key)
-
-    @staticmethod
-    def _delete_credential(key: str) -> None:
-        """Delete credential"""
-        try:
-            keyring.delete_password(CredentialStorage.SERVICE_NAME, key)
-        except keyring.errors.PasswordDeleteError:
-            pass  # Credential doesn't exist
+        Args:
+            user_repository: Implementation of IUserRepository
+            card_repository: Implementation of ICardRepository
+        """
+        self._user_repo = user_repository
+        self._card_repo = card_repository
+        # Ensure database is initialized when instance is created
+        DatabaseManager.initialize()
 
     # KTX Login Credentials
-    @staticmethod
-    def save_ktx_login(username: str, password: str) -> None:
-        """Save KTX login credentials"""
-        CredentialStorage._set_credential(CredentialStorage.KEY_KTX_USERNAME, username)
-        CredentialStorage._set_credential(CredentialStorage.KEY_KTX_PASSWORD, password)
+    def save_ktx_login(self, username: str, password: str) -> None:
+        """Save KTX login credentials (encrypted)"""
+        # Encrypt credentials
+        encrypted_username = EncryptionService.encrypt(username)
+        encrypted_password = EncryptionService.encrypt(password)
 
-    @staticmethod
-    def load_ktx_login() -> Optional[LoginCredentials]:
-        """Load KTX login credentials"""
-        username = CredentialStorage._get_credential(CredentialStorage.KEY_KTX_USERNAME)
-        password = CredentialStorage._get_credential(CredentialStorage.KEY_KTX_PASSWORD)
+        # Save using repository
+        self._user_repo.save(
+            username=encrypted_username,
+            password=encrypted_password,
+            train_type="KORAIL"
+        )
 
-        if username and password:
-            return LoginCredentials(username=username, password=password)
-        return None
+    def load_ktx_login(self) -> LoginCredentials | None:
+        """Load KTX login credentials (decrypted)"""
+        try:
+            # Load using repository
+            user = self._user_repo.find_by_train_type("KORAIL")
 
-    @staticmethod
-    def delete_ktx_login() -> None:
+            if user:
+                # Decrypt credentials
+                username = EncryptionService.decrypt(user.username)
+                password = EncryptionService.decrypt(user.password)
+
+                if username and password:
+                    return LoginCredentials(username=username, password=password)
+                else:
+                    # Decryption failed - delete corrupted data
+                    self._user_repo.delete("KORAIL")
+
+            return None
+        except Exception:
+            # If any error occurs, delete corrupted data and return None
+            try:
+                self._user_repo.delete("KORAIL")
+            except Exception:
+                pass
+            return None
+
+    def delete_ktx_login(self) -> None:
         """Delete KTX login credentials"""
-        CredentialStorage._delete_credential(CredentialStorage.KEY_KTX_USERNAME)
-        CredentialStorage._delete_credential(CredentialStorage.KEY_KTX_PASSWORD)
+        self._user_repo.delete("KORAIL")
 
     # SRT Login Credentials
-    @staticmethod
-    def save_srt_login(username: str, password: str) -> None:
-        """Save SRT login credentials"""
-        CredentialStorage._set_credential(CredentialStorage.KEY_SRT_USERNAME, username)
-        CredentialStorage._set_credential(CredentialStorage.KEY_SRT_PASSWORD, password)
+    def save_srt_login(self, username: str, password: str) -> None:
+        """Save SRT login credentials (encrypted)"""
+        # Encrypt credentials
+        encrypted_username = EncryptionService.encrypt(username)
+        encrypted_password = EncryptionService.encrypt(password)
 
-    @staticmethod
-    def load_srt_login() -> Optional[LoginCredentials]:
-        """Load SRT login credentials"""
-        username = CredentialStorage._get_credential(CredentialStorage.KEY_SRT_USERNAME)
-        password = CredentialStorage._get_credential(CredentialStorage.KEY_SRT_PASSWORD)
+        # Save using repository
+        self._user_repo.save(
+            username=encrypted_username,
+            password=encrypted_password,
+            train_type="SRT"
+        )
 
-        if username and password:
-            return LoginCredentials(username=username, password=password)
+    def load_srt_login(self) -> LoginCredentials | None:
+        """Load SRT login credentials (decrypted)"""
+        # Load using repository
+        user = self._user_repo.find_by_train_type("SRT")
+
+        if user:
+            # Decrypt credentials
+            username = EncryptionService.decrypt(user.username)
+            password = EncryptionService.decrypt(user.password)
+
+            if username and password:
+                return LoginCredentials(username=username, password=password)
+
         return None
 
-    @staticmethod
-    def delete_srt_login() -> None:
+    def delete_srt_login(self) -> None:
         """Delete SRT login credentials"""
-        CredentialStorage._delete_credential(CredentialStorage.KEY_SRT_USERNAME)
-        CredentialStorage._delete_credential(CredentialStorage.KEY_SRT_PASSWORD)
+        self._user_repo.delete("SRT")
 
-    # Payment Credentials (shared between KTX and SRT)
-    @staticmethod
+    # Payment Credentials
     def save_payment(
+        self,
         card_number: str,
         card_password: str,
         expire: str,
         validation_number: str,
-        is_corporate: bool
+        is_corporate: bool,
+        train_type: str = "KORAIL"
     ) -> None:
-        """Save payment credentials"""
-        CredentialStorage._set_credential(CredentialStorage.KEY_CARD_NUMBER, card_number)
-        CredentialStorage._set_credential(CredentialStorage.KEY_CARD_PASSWORD, card_password)
-        CredentialStorage._set_credential(CredentialStorage.KEY_CARD_EXPIRE, expire)
-        CredentialStorage._set_credential(CredentialStorage.KEY_CARD_VALIDATION, validation_number)
-        CredentialStorage._set_credential(CredentialStorage.KEY_CARD_CORPORATE, str(is_corporate))
+        """
+        Save payment credentials (encrypted)
 
-    @staticmethod
-    def load_payment() -> Optional[PaymentCredentials]:
-        """Load payment credentials"""
-        card_number = CredentialStorage._get_credential(CredentialStorage.KEY_CARD_NUMBER)
-        card_password = CredentialStorage._get_credential(CredentialStorage.KEY_CARD_PASSWORD)
-        expire = CredentialStorage._get_credential(CredentialStorage.KEY_CARD_EXPIRE)
-        validation_number = CredentialStorage._get_credential(CredentialStorage.KEY_CARD_VALIDATION)
-        is_corporate_str = CredentialStorage._get_credential(CredentialStorage.KEY_CARD_CORPORATE)
+        Args:
+            card_number: Card number (16 digits)
+            card_password: Card password (2 digits)
+            expire: Card expiration date (YYMM format)
+            validation_number: Birth date (YYMMDD) or business number (10 digits)
+            is_corporate: Whether it's a corporate card
+            train_type: "KORAIL" or "SRT" (default: "KORAIL")
+        """
+        # Encrypt credentials
+        encrypted_card_number = EncryptionService.encrypt(card_number)
+        encrypted_card_password = EncryptionService.encrypt(card_password)
+        encrypted_expire = EncryptionService.encrypt(expire)
+        encrypted_validation = EncryptionService.encrypt(validation_number)
 
-        if all([card_number, card_password, expire, validation_number, is_corporate_str]):
-            return PaymentCredentials(
-                card_number=card_number,
-                card_password=card_password,
-                expire=expire,
-                validation_number=validation_number,
-                is_corporate=(is_corporate_str == "True")
-            )
+        # Save using repository
+        self._card_repo.save(
+            card_number=encrypted_card_number,
+            card_password=encrypted_card_password,
+            card_expired_date=encrypted_expire,
+            card_validate_number=encrypted_validation,
+            is_corporate=is_corporate,
+            train_type=train_type
+        )
+
+    def load_payment(self, train_type: str = "KORAIL") -> PaymentCredentials | None:
+        """
+        Load payment credentials (decrypted)
+
+        Args:
+            train_type: "KORAIL" or "SRT" (default: "KORAIL")
+
+        Returns:
+            PaymentCredentials if found, None otherwise
+        """
+        # Load using repository
+        card = self._card_repo.find_by_train_type(train_type)
+
+        if card:
+            # Decrypt credentials
+            card_number = EncryptionService.decrypt(card.card_number)
+            card_password = EncryptionService.decrypt(card.card_password)
+            expire = EncryptionService.decrypt(card.card_expired_date)
+            validation_number = EncryptionService.decrypt(card.card_validate_number)
+
+            if all([card_number, card_password, expire, validation_number]):
+                return PaymentCredentials(
+                    card_number=card_number,
+                    card_password=card_password,
+                    expire=expire,
+                    validation_number=validation_number,
+                    is_corporate=card.is_corporate
+                )
+
         return None
 
-    @staticmethod
-    def delete_payment() -> None:
-        """Delete payment credentials"""
-        CredentialStorage._delete_credential(CredentialStorage.KEY_CARD_NUMBER)
-        CredentialStorage._delete_credential(CredentialStorage.KEY_CARD_PASSWORD)
-        CredentialStorage._delete_credential(CredentialStorage.KEY_CARD_EXPIRE)
-        CredentialStorage._delete_credential(CredentialStorage.KEY_CARD_VALIDATION)
-        CredentialStorage._delete_credential(CredentialStorage.KEY_CARD_CORPORATE)
+    def delete_payment(self, train_type: str = "KORAIL") -> None:
+        """
+        Delete payment credentials
+
+        Args:
+            train_type: "KORAIL" or "SRT" (default: "KORAIL")
+        """
+        self._card_repo.delete(train_type)

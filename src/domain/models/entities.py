@@ -1,11 +1,29 @@
 """Domain entities and value objects"""
 
 from dataclasses import dataclass
-from typing import List, Optional
+from typing import List, Optional, Protocol
 from datetime import datetime, date
 
 from src.domain.models.enums import PassengerType, TrainType
 
+
+class UserEntity(Protocol):
+    """User entity protocol (domain concept)"""
+    id: int
+    username: str
+    password: str
+    train_type: TrainType
+
+
+class CardEntity(Protocol):
+    """Card entity protocol (domain concept)"""
+    id: int
+    card_number: str
+    card_password: str
+    card_expired_date: str
+    card_validate_number: str
+    is_corporate: bool
+    train_type: TrainType
 
 @dataclass
 class Passenger:

@@ -4,6 +4,9 @@ assets/external/
 .web
 *.db
 
+# Alembic
+__pycache__/
+
 # Python
 *.py[cod]
 *$py.class

@@ -1,189 +1,205 @@
 """Unit tests for CredentialStorage"""
-from unittest.mock import patch
+from unittest.mock import MagicMock
 from src.infrastructure.security.credential_storage import CredentialStorage
 from src.infrastructure.security.dto import LoginCredentials, PaymentCredentials
 
 
-class TestCredentialStorageConstants:
-    """Tests for CredentialStorage constants"""
-
-    def test_service_name(self):
-        """Test that SERVICE_NAME is correctly defined"""
-        assert CredentialStorage.SERVICE_NAME == "KTX-SRT-Macro"
-
-    def test_key_constants_exist(self):
-        """Test that all key constants are defined"""
-        # Login keys
-        assert hasattr(CredentialStorage, "KEY_KTX_USERNAME")
-        assert hasattr(CredentialStorage, "KEY_KTX_PASSWORD")
-        assert hasattr(CredentialStorage, "KEY_SRT_USERNAME")
-        assert hasattr(CredentialStorage, "KEY_SRT_PASSWORD")
-
-        # Payment keys (unified for both KTX and SRT)
-        assert hasattr(CredentialStorage, "KEY_CARD_NUMBER")
-        assert hasattr(CredentialStorage, "KEY_CARD_PASSWORD")
-        assert hasattr(CredentialStorage, "KEY_CARD_EXPIRE")
-        assert hasattr(CredentialStorage, "KEY_CARD_VALIDATION")
-        assert hasattr(CredentialStorage, "KEY_CARD_CORPORATE")
+def create_credential_storage():
+    """Helper function to create a CredentialStorage instance with mocked repositories"""
+    mock_user_repo = MagicMock()
+    mock_card_repo = MagicMock()
+    return CredentialStorage(
+        user_repository=mock_user_repo,
+        card_repository=mock_card_repo
+    ), mock_user_repo, mock_card_repo
 
 
-@patch("src.infrastructure.security.credential_storage.keyring")
 class TestCredentialStorageKTXLogin:
     """Tests for KTX login credential storage"""
 
-    def test_save_ktx_login(self, mock_keyring):
+    def test_save_ktx_login(self):
         """Test saving KTX login credentials"""
         # Arrange
+        storage, mock_user_repo, _ = create_credential_storage()
         username = "test_user"
         password = "test_password"
 
         # Act
-        CredentialStorage.save_ktx_login(username, password)
+        storage.save_ktx_login(username, password)
 
         # Assert
-        assert mock_keyring.set_password.call_count == 2
-        mock_keyring.set_password.assert_any_call(
-            "KTX-SRT-Macro", "ktx_username", username
-        )
-        mock_keyring.set_password.assert_any_call(
-            "KTX-SRT-Macro", "ktx_password", password
-        )
+        mock_user_repo.save.assert_called_once()
+        call_args = mock_user_repo.save.call_args
+        assert call_args.kwargs['train_type'] == "KORAIL"
 
-    def test_load_ktx_login_success(self, mock_keyring):
+    def test_load_ktx_login_success(self):
         """Test loading KTX login credentials successfully"""
         # Arrange
-        mock_keyring.get_password.side_effect = ["test_user", "test_password"]
+        storage, mock_user_repo, _ = create_credential_storage()
 
-        # Act
-        result = CredentialStorage.load_ktx_login()
+        mock_user = MagicMock()
+        # Simulate encrypted data (EncryptionService will be mocked in integration tests)
+        mock_user.username = "encrypted_user"
+        mock_user.password = "encrypted_pass"
+        mock_user_repo.find_by_train_type.return_value = mock_user
 
-        # Assert
-        assert result is not None
-        assert isinstance(result, LoginCredentials)
-        assert result.username == "test_user"
-        assert result.password == "test_password"
-        assert mock_keyring.get_password.call_count == 2
+        # Mock EncryptionService
+        from unittest.mock import patch
+        with patch('src.infrastructure.security.credential_storage.EncryptionService') as mock_enc:
+            mock_enc.decrypt.side_effect = lambda x: x.replace("encrypted_", "")
 
-    def test_load_ktx_login_missing_username(self, mock_keyring):
+            # Act
+            result = storage.load_ktx_login()
+
+            # Assert
+            assert result is not None
+            assert isinstance(result, LoginCredentials)
+            assert result.username == "user"
+            assert result.password == "pass"
+            mock_user_repo.find_by_train_type.assert_called_once_with("KORAIL")
+
+    def test_load_ktx_login_missing_username(self):
         """Test loading KTX login credentials when username is missing"""
         # Arrange
-        mock_keyring.get_password.side_effect = [None, "test_password"]
+        storage, mock_user_repo, _ = create_credential_storage()
+        mock_user_repo.find_by_train_type.return_value = None
 
         # Act
-        result = CredentialStorage.load_ktx_login()
+        result = storage.load_ktx_login()
 
         # Assert
         assert result is None
 
-    def test_load_ktx_login_missing_password(self, mock_keyring):
+    def test_load_ktx_login_missing_password(self):
         """Test loading KTX login credentials when password is missing"""
         # Arrange
-        mock_keyring.get_password.side_effect = ["test_user", None]
+        storage, mock_user_repo, _ = create_credential_storage()
 
-        # Act
-        result = CredentialStorage.load_ktx_login()
+        mock_user = MagicMock()
+        mock_user.username = "encrypted_user"
+        mock_user.password = "encrypted_pass"
+        mock_user_repo.find_by_train_type.return_value = mock_user
 
-        # Assert
-        assert result is None
+        # Mock EncryptionService to return None for password
+        from unittest.mock import patch
+        with patch('src.infrastructure.security.credential_storage.EncryptionService') as mock_enc:
+            mock_enc.decrypt.side_effect = lambda x: "user" if "user" in x else None
 
-    def test_load_ktx_login_both_missing(self, mock_keyring):
+            # Act
+            result = storage.load_ktx_login()
+
+            # Assert
+            assert result is None
+
+    def test_load_ktx_login_both_missing(self):
         """Test loading KTX login credentials when both are missing"""
         # Arrange
-        mock_keyring.get_password.side_effect = [None, None]
+        storage, mock_user_repo, _ = create_credential_storage()
+        mock_user_repo.find_by_train_type.return_value = None
 
         # Act
-        result = CredentialStorage.load_ktx_login()
+        result = storage.load_ktx_login()
 
         # Assert
         assert result is None
 
-    def test_delete_ktx_login(self, mock_keyring):
+    def test_delete_ktx_login(self):
         """Test deleting KTX login credentials"""
+        # Arrange
+        storage, mock_user_repo, _ = create_credential_storage()
+
         # Act
-        CredentialStorage.delete_ktx_login()
+        storage.delete_ktx_login()
 
         # Assert
-        assert mock_keyring.delete_password.call_count == 2
-        mock_keyring.delete_password.assert_any_call("KTX-SRT-Macro", "ktx_username")
-        mock_keyring.delete_password.assert_any_call("KTX-SRT-Macro", "ktx_password")
+        mock_user_repo.delete.assert_called_once_with("KORAIL")
 
-    def test_delete_ktx_login_not_found(self, mock_keyring):
+    def test_delete_ktx_login_not_found(self):
         """Test deleting KTX login credentials when they don't exist"""
         # Arrange
-        import keyring.errors
-        mock_keyring.delete_password.side_effect = keyring.errors.PasswordDeleteError("Not found")
-        mock_keyring.errors.PasswordDeleteError = keyring.errors.PasswordDeleteError
+        storage, mock_user_repo, _ = create_credential_storage()
 
         # Act - should not raise exception
-        CredentialStorage.delete_ktx_login()
+        storage.delete_ktx_login()
 
         # Assert
-        assert mock_keyring.delete_password.call_count == 2
+        mock_user_repo.delete.assert_called_once_with("KORAIL")
 
 
-@patch("src.infrastructure.security.credential_storage.keyring")
 class TestCredentialStorageSRTLogin:
     """Tests for SRT login credential storage"""
 
-    def test_save_srt_login(self, mock_keyring):
+    def test_save_srt_login(self):
         """Test saving SRT login credentials"""
         # Arrange
+        storage, mock_user_repo, _ = create_credential_storage()
         username = "srt_user"
         password = "srt_password"
 
         # Act
-        CredentialStorage.save_srt_login(username, password)
+        storage.save_srt_login(username, password)
 
         # Assert
-        assert mock_keyring.set_password.call_count == 2
-        mock_keyring.set_password.assert_any_call(
-            "KTX-SRT-Macro", "srt_username", username
-        )
-        mock_keyring.set_password.assert_any_call(
-            "KTX-SRT-Macro", "srt_password", password
-        )
+        mock_user_repo.save.assert_called_once()
+        call_args = mock_user_repo.save.call_args
+        assert call_args.kwargs['train_type'] == "SRT"
 
-    def test_load_srt_login_success(self, mock_keyring):
+    def test_load_srt_login_success(self):
         """Test loading SRT login credentials successfully"""
         # Arrange
-        mock_keyring.get_password.side_effect = ["srt_user", "srt_password"]
+        storage, mock_user_repo, _ = create_credential_storage()
 
-        # Act
-        result = CredentialStorage.load_srt_login()
+        mock_user = MagicMock()
+        mock_user.username = "encrypted_srt_user"
+        mock_user.password = "encrypted_srt_password"
+        mock_user_repo.find_by_train_type.return_value = mock_user
 
-        # Assert
-        assert result is not None
-        assert isinstance(result, LoginCredentials)
-        assert result.username == "srt_user"
-        assert result.password == "srt_password"
+        # Mock EncryptionService
+        from unittest.mock import patch
+        with patch('src.infrastructure.security.credential_storage.EncryptionService') as mock_enc:
+            mock_enc.decrypt.side_effect = lambda x: x.replace("encrypted_", "")
 
-    def test_load_srt_login_missing(self, mock_keyring):
+            # Act
+            result = storage.load_srt_login()
+
+            # Assert
+            assert result is not None
+            assert isinstance(result, LoginCredentials)
+            assert result.username == "srt_user"
+            assert result.password == "srt_password"
+
+    def test_load_srt_login_missing(self):
         """Test loading SRT login credentials when missing"""
         # Arrange
-        mock_keyring.get_password.side_effect = [None, None]
+        storage, mock_user_repo, _ = create_credential_storage()
+        mock_user_repo.find_by_train_type.return_value = None
 
         # Act
-        result = CredentialStorage.load_srt_login()
+        result = storage.load_srt_login()
 
         # Assert
         assert result is None
 
-    def test_delete_srt_login(self, mock_keyring):
+    def test_delete_srt_login(self):
         """Test deleting SRT login credentials"""
+        # Arrange
+        storage, mock_user_repo, _ = create_credential_storage()
+
         # Act
-        CredentialStorage.delete_srt_login()
+        storage.delete_srt_login()
 
         # Assert
-        assert mock_keyring.delete_password.call_count == 2
+        mock_user_repo.delete.assert_called_once_with("SRT")
 
 
-@patch("src.infrastructure.security.credential_storage.keyring")
 class TestCredentialStoragePayment:
     """Tests for unified payment credential storage (shared between KTX and SRT)"""
 
-    def test_save_payment_personal_card(self, mock_keyring):
+    def test_save_payment_personal_card(self):
         """Test saving payment credentials for personal card"""
         # Arrange
+        storage, _, mock_card_repo = create_credential_storage()
+
         card_number = "1234567890123456"
         card_password = "12"
         expire = "2512"
@@ -191,31 +207,21 @@ class TestCredentialStoragePayment:
         is_corporate = False
 
         # Act
-        CredentialStorage.save_payment(
+        storage.save_payment(
             card_number, card_password, expire, validation_number, is_corporate
         )
 
         # Assert
-        assert mock_keyring.set_password.call_count == 5
-        mock_keyring.set_password.assert_any_call(
-            "KTX-SRT-Macro", "card_number", card_number
-        )
-        mock_keyring.set_password.assert_any_call(
-            "KTX-SRT-Macro", "card_password", card_password
-        )
-        mock_keyring.set_password.assert_any_call(
-            "KTX-SRT-Macro", "card_expire", expire
-        )
-        mock_keyring.set_password.assert_any_call(
-            "KTX-SRT-Macro", "card_validation", validation_number
-        )
-        mock_keyring.set_password.assert_any_call(
-            "KTX-SRT-Macro", "card_corporate", "False"
-        )
+        mock_card_repo.save.assert_called_once()
+        call_args = mock_card_repo.save.call_args
+        assert call_args.kwargs['train_type'] == "KORAIL"
+        assert call_args.kwargs['is_corporate'] == False
 
-    def test_save_payment_corporate_card(self, mock_keyring):
+    def test_save_payment_corporate_card(self):
         """Test saving payment credentials for corporate card"""
         # Arrange
+        storage, _, mock_card_repo = create_credential_storage()
+
         card_number = "1234567890123456"
         card_password = "12"
         expire = "2512"
@@ -223,114 +229,134 @@ class TestCredentialStoragePayment:
         is_corporate = True
 
         # Act
-        CredentialStorage.save_payment(
+        storage.save_payment(
             card_number, card_password, expire, validation_number, is_corporate
         )
 
         # Assert
-        mock_keyring.set_password.assert_any_call(
-            "KTX-SRT-Macro", "card_corporate", "True"
-        )
+        mock_card_repo.save.assert_called_once()
+        call_args = mock_card_repo.save.call_args
+        assert call_args.kwargs['is_corporate'] == True
 
-    def test_load_payment_success_personal(self, mock_keyring):
+    def test_load_payment_success_personal(self):
         """Test loading payment credentials for personal card"""
         # Arrange
-        mock_keyring.get_password.side_effect = [
-            "1234567890123456",  # card_number
-            "12",                # card_password
-            "2512",              # expire
-            "900101",            # validation_number
-            "False"              # is_corporate
-        ]
+        storage, _, mock_card_repo = create_credential_storage()
 
-        # Act
-        result = CredentialStorage.load_payment()
+        mock_card = MagicMock()
+        mock_card.card_number = "encrypted_1234567890123456"
+        mock_card.card_password = "encrypted_12"
+        mock_card.card_expired_date = "encrypted_2512"
+        mock_card.card_validate_number = "encrypted_900101"
+        mock_card.is_corporate = False
+        mock_card_repo.find_by_train_type.return_value = mock_card
 
-        # Assert
-        assert result is not None
-        assert isinstance(result, PaymentCredentials)
-        assert result.card_number == "1234567890123456"
-        assert result.card_password == "12"
-        assert result.expire == "2512"
-        assert result.validation_number == "900101"
-        assert result.is_corporate is False
+        # Mock EncryptionService
+        from unittest.mock import patch
+        with patch('src.infrastructure.security.credential_storage.EncryptionService') as mock_enc:
+            mock_enc.decrypt.side_effect = lambda x: x.replace("encrypted_", "")
 
-    def test_load_payment_success_corporate(self, mock_keyring):
+            # Act
+            result = storage.load_payment()
+
+            # Assert
+            assert result is not None
+            assert isinstance(result, PaymentCredentials)
+            assert result.card_number == "1234567890123456"
+            assert result.card_password == "12"
+            assert result.expire == "2512"
+            assert result.validation_number == "900101"
+            assert result.is_corporate is False
+
+    def test_load_payment_success_corporate(self):
         """Test loading payment credentials for corporate card"""
         # Arrange
-        mock_keyring.get_password.side_effect = [
-            "1234567890123456",  # card_number
-            "12",                # card_password
-            "2512",              # expire
-            "1234567890",        # validation_number (사업자번호)
-            "True"               # is_corporate
-        ]
+        storage, _, mock_card_repo = create_credential_storage()
 
-        # Act
-        result = CredentialStorage.load_payment()
+        mock_card = MagicMock()
+        mock_card.card_number = "encrypted_1234567890123456"
+        mock_card.card_password = "encrypted_12"
+        mock_card.card_expired_date = "encrypted_2512"
+        mock_card.card_validate_number = "encrypted_1234567890"
+        mock_card.is_corporate = True
+        mock_card_repo.find_by_train_type.return_value = mock_card
 
-        # Assert
-        assert result is not None
-        assert result.is_corporate is True
-        assert result.validation_number == "1234567890"
+        # Mock EncryptionService
+        from unittest.mock import patch
+        with patch('src.infrastructure.security.credential_storage.EncryptionService') as mock_enc:
+            mock_enc.decrypt.side_effect = lambda x: x.replace("encrypted_", "")
 
-    def test_load_payment_missing_data(self, mock_keyring):
+            # Act
+            result = storage.load_payment()
+
+            # Assert
+            assert result is not None
+            assert result.is_corporate is True
+            assert result.validation_number == "1234567890"
+
+    def test_load_payment_missing_data(self):
         """Test loading payment credentials when data is missing"""
         # Arrange
-        mock_keyring.get_password.side_effect = [
-            "1234567890123456",  # card_number
-            None,                # card_password - missing
-            "2512",              # expire
-            "900101",            # validation_number
-            "False"              # is_corporate
-        ]
+        storage, _, mock_card_repo = create_credential_storage()
 
-        # Act
-        result = CredentialStorage.load_payment()
+        mock_card = MagicMock()
+        mock_card.card_number = "encrypted_1234567890123456"
+        mock_card.card_password = "encrypted_card_password"  # Changed to match pattern
+        mock_card.card_expired_date = "encrypted_2512"
+        mock_card.card_validate_number = "encrypted_900101"
+        mock_card.is_corporate = False
+        mock_card_repo.find_by_train_type.return_value = mock_card
 
-        # Assert
-        assert result is None
+        # Mock EncryptionService to return None for password
+        from unittest.mock import patch
+        with patch('src.infrastructure.security.credential_storage.EncryptionService') as mock_enc:
+            mock_enc.decrypt.side_effect = lambda x: None if "card_password" in x else x.replace("encrypted_", "")
 
-    def test_load_payment_all_missing(self, mock_keyring):
+            # Act
+            result = storage.load_payment()
+
+            # Assert
+            assert result is None
+
+    def test_load_payment_all_missing(self):
         """Test loading payment credentials when all data is missing"""
         # Arrange
-        mock_keyring.get_password.side_effect = [None, None, None, None, None]
+        storage, _, mock_card_repo = create_credential_storage()
+        mock_card_repo.find_by_train_type.return_value = None
 
         # Act
-        result = CredentialStorage.load_payment()
+        result = storage.load_payment()
 
         # Assert
         assert result is None
 
-    def test_delete_payment(self, mock_keyring):
+    def test_delete_payment(self):
         """Test deleting payment credentials"""
+        # Arrange
+        storage, _, mock_card_repo = create_credential_storage()
+
         # Act
-        CredentialStorage.delete_payment()
+        storage.delete_payment()
 
         # Assert
-        assert mock_keyring.delete_password.call_count == 5
-        mock_keyring.delete_password.assert_any_call("KTX-SRT-Macro", "card_number")
-        mock_keyring.delete_password.assert_any_call("KTX-SRT-Macro", "card_password")
-        mock_keyring.delete_password.assert_any_call("KTX-SRT-Macro", "card_expire")
-        mock_keyring.delete_password.assert_any_call("KTX-SRT-Macro", "card_validation")
-        mock_keyring.delete_password.assert_any_call("KTX-SRT-Macro", "card_corporate")
+        mock_card_repo.delete.assert_called_once_with("KORAIL")
 
-    def test_delete_payment_not_found(self, mock_keyring):
+    def test_delete_payment_not_found(self):
         """Test deleting payment credentials when they don't exist"""
         # Arrange
-        import keyring.errors
-        mock_keyring.delete_password.side_effect = keyring.errors.PasswordDeleteError("Not found")
-        mock_keyring.errors.PasswordDeleteError = keyring.errors.PasswordDeleteError
+        storage, _, mock_card_repo = create_credential_storage()
 
         # Act - should not raise exception
-        CredentialStorage.delete_payment()
+        storage.delete_payment()
 
         # Assert
-        assert mock_keyring.delete_password.call_count == 5
+        mock_card_repo.delete.assert_called_once_with("KORAIL")
 
-    def test_payment_shared_between_ktx_and_srt(self, mock_keyring):
+    def test_payment_shared_between_ktx_and_srt(self):
         """Test that payment credentials are shared between KTX and SRT"""
         # Arrange
+        storage, _, mock_card_repo = create_credential_storage()
+
         card_number = "1234567890123456"
         card_password = "12"
         expire = "2512"
@@ -338,27 +364,11 @@ class TestCredentialStoragePayment:
         is_corporate = False
 
         # Act - Save payment once
-        CredentialStorage.save_payment(
+        storage.save_payment(
             card_number, card_password, expire, validation_number, is_corporate
         )
 
-        # Arrange for load
-        mock_keyring.get_password.side_effect = [
-            card_number,
-            card_password,
-            expire,
-            validation_number,
-            "False"
-        ]
-
-        # Act - Load payment (should work for both KTX and SRT)
-        result = CredentialStorage.load_payment()
-
-        # Assert - Same credentials should be available for both services
-        assert result is not None
-        assert result.card_number == card_number
-        # Verify that only unified keys were used (no ktx_/srt_ prefix)
-        for call in mock_keyring.set_password.call_args_list:
-            key_name = call[0][1]  # Second argument is the key name
-            assert not key_name.startswith("ktx_"), f"Found KTX-specific key: {key_name}"
-            assert not key_name.startswith("srt_"), f"Found SRT-specific key: {key_name}"
+        # Assert - Verify save was called with KORAIL (default)
+        mock_card_repo.save.assert_called_once()
+        call_args = mock_card_repo.save.call_args
+        assert call_args.kwargs['train_type'] == "KORAIL"

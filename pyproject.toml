@@ -25,8 +25,9 @@ dependencies = [
     "curl-cffi>=0.13.0",
     "pycryptodome>=3.18.0",
     "pyqt6>=6.9.1",
-    "keyring>=25.5.0",
     "certifi>=2024.0.0",
+    "sqlalchemy>=2.0.0",
+    "alembic>=1.13.0",
 ]
 
 [project.optional-dependencies]
