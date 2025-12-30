@@ -55,7 +55,7 @@ jobs:
     - name: Download and Setup Bore Tunnel (Free TCP Tunnel)
       run: |
         # Bore 다운로드 (무료, 인증 불필요, TCP 전용)
-        Invoke-WebRequest -Uri "https://github.com/ekzhang/bore/releases/latest/download/bore-v0.5.1-x86_64-pc-windows-msvc.zip" -OutFile "bore.zip"
+        Invoke-WebRequest -Uri "https://github.com/ekzhang/bore/releases/download/v0.6.0/bore-v0.6.0-x86_64-pc-windows-msvc.zip" -OutFile "bore.zip"
         Expand-Archive -Path "bore.zip" -DestinationPath "."
 
         Write-Host "============================================"
